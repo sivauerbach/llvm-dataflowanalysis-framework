@@ -9,7 +9,7 @@ BUILDDIR     = build
 DEPDIR       = $(BUILDDIR)/.deps
 DEPFLAGS 	 = -MT $@ -MMD -MP -MF $(DEPDIR)/$(patsubst $(BUILDDIR)/%.o,%.d,$@)
 
-TESTS             = dominators faint
+TESTS             = dominators faint range
 OPTIMIZER_SOURCES = src/unifiedpass.cpp 
 
 FRAMEWORK_SOURCES = $(wildcard $(FRAMEWORKDIR)/*.cpp)

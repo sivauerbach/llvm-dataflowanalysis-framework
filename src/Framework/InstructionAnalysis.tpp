@@ -6,8 +6,8 @@ using namespace llvm;
 
 namespace framework {
 
-template <typename Derived, typename LatticeVal, PASS_TYPE PassType>
-std::vector<Instruction*> InstructionAnalysis<Derived, LatticeVal, PassType>::getNodePredecessors(Instruction* I, Function*) { 
+template <typename Derived, typename LatticeValT, PASS_TYPE PassType>
+std::vector<Instruction*> InstructionAnalysis<Derived, LatticeValT, PassType>::getNodePredecessors(Instruction* I, Function*) { 
     if (! isFirstInstruction(I)) { 
         return std::vector<Instruction*>({I->getPrevNode()}); 
     } else {
@@ -20,8 +20,8 @@ std::vector<Instruction*> InstructionAnalysis<Derived, LatticeVal, PassType>::ge
     }
 }
 
-template <typename Derived, typename LatticeVal, PASS_TYPE PassType>
-std::vector<Instruction*> InstructionAnalysis<Derived, LatticeVal, PassType>::getNodeSuccessors(Instruction* I, Function*) { 
+template <typename Derived, typename LatticeValT, PASS_TYPE PassType>
+std::vector<Instruction*> InstructionAnalysis<Derived, LatticeValT, PassType>::getNodeSuccessors(Instruction* I, Function*) { 
     if (! isLastInstruction(I)) { 
         return std::vector<Instruction*>({I->getNextNode()}); 
     } else {
@@ -34,8 +34,8 @@ std::vector<Instruction*> InstructionAnalysis<Derived, LatticeVal, PassType>::ge
     }
 }
 
-template <typename Derived, typename LatticeVal, PASS_TYPE PassType>
-std::vector<Instruction*> InstructionAnalysis<Derived, LatticeVal, PassType>::getIter(Function* F) { 
+template <typename Derived, typename LatticeValT, PASS_TYPE PassType>
+std::vector<Instruction*> InstructionAnalysis<Derived, LatticeValT, PassType>::getIter(Function* F) { 
     std::vector<Instruction *> iter;
 
     for(BasicBlock& B: *F) {

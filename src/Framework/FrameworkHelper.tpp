@@ -4,13 +4,13 @@ using namespace llvm;
 
 namespace framework {
 
-template <typename Derived, typename LatticeVal>
-requires type_traits::isDenseSet<LatticeVal>::value
-LatticeVal FrameworkHelper<Derived, LatticeVal>::interserctionOp(const LatticeVal& lhs, const LatticeVal& rhs) const {
+template <typename Derived, typename LatticeValT>
+requires type_traits::isDenseSet<LatticeValT>::value
+LatticeValT FrameworkHelper<Derived, LatticeValT>::interserctionOp(const LatticeValT& lhs, const LatticeValT& rhs) const {
         if (lhs.size() == full().size() || rhs.size() == empty().size()) return rhs;
         if (rhs.size() == full().size() || lhs.size() == empty().size()) return lhs;
 
-        LatticeVal result;
+        LatticeValT result;
 
         for (const itemType& value : lhs)
             if (rhs.count(value))
@@ -19,13 +19,13 @@ LatticeVal FrameworkHelper<Derived, LatticeVal>::interserctionOp(const LatticeVa
         return result;
 }
 
-template <typename Derived, typename LatticeVal>
-requires type_traits::isDenseSet<LatticeVal>::value
-LatticeVal FrameworkHelper<Derived, LatticeVal>::unionOp(const LatticeVal& lhs, const LatticeVal& rhs) const {
+template <typename Derived, typename LatticeValT>
+requires type_traits::isDenseSet<LatticeValT>::value
+LatticeValT FrameworkHelper<Derived, LatticeValT>::unionOp(const LatticeValT& lhs, const LatticeValT& rhs) const {
     if (lhs.size() == full().size() || rhs.size() == empty().size()) return lhs;
     if (rhs.size() == full().size() || lhs.size() == empty().size()) return rhs;
 
-    LatticeVal result;
+    LatticeValT result;
 
     for (const itemType& value : lhs)
         result.insert(value);
@@ -37,13 +37,13 @@ LatticeVal FrameworkHelper<Derived, LatticeVal>::unionOp(const LatticeVal& lhs, 
 
 }
 
-template <typename Derived, typename LatticeVal>
-requires type_traits::isDenseSet<LatticeVal>::value
-LatticeVal FrameworkHelper<Derived, LatticeVal>::subtractOp(const LatticeVal& lhs, const LatticeVal& rhs) const {
+template <typename Derived, typename LatticeValT>
+requires type_traits::isDenseSet<LatticeValT>::value
+LatticeValT FrameworkHelper<Derived, LatticeValT>::subtractOp(const LatticeValT& lhs, const LatticeValT& rhs) const {
     if (rhs.size() == empty().size()) return lhs;
     if (rhs.size() == full().size() || lhs.size() == empty().size()) return empty();
 
-    LatticeVal result;
+    LatticeValT result;
 
     for (const itemType& value : lhs)
         if ( !rhs.count(value))

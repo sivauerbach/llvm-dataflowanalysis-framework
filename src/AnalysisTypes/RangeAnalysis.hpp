@@ -2,6 +2,9 @@
 #define RANGE_ANALYSIS_HPP
 
 #include "Framework/InstructionAnalysis.hpp"
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Instructions.h>
+#include "llvm/IR/Constants.h"
 
 #include <limits>
 #include <type_traits>
@@ -76,29 +79,59 @@ public:
         if (sizeInBits >= 64) 
             return std::numeric_limits<int64_t>::min();
 
-        return -(2 << (sizeInBits - 1));
+        return -(1ULL << (sizeInBits - 1));
     }
 
     static int64_t max(size_t sizeInBits) {
         if (sizeInBits >= 64) 
             return std::numeric_limits<int64_t>::max();
 
-        return (2 << (sizeInBits - 1)) - 1;
+        return (1ULL << (sizeInBits - 1)) - 1;
     }
 
 public:
     // constructor
+    SignedRange(): SignedRange(true) { }
     explicit SignedRange (bool _empty): lower(0), upper(0), empty(_empty) {}
     SignedRange (int64_t _lower, int64_t _upper): lower(_lower), upper(_upper), empty(false) {}
     SignedRange (int64_t _lower, int64_t _upper, bool _empty): lower(_lower), upper(_upper), empty(_empty) {}
 
-    static full(size_t sizeInBits = 64) {
+    SignedRange(const SignedRange& other): lower(other.lower), upper(other.upper), empty(other.empty) {}
+    SignedRange(SignedRange&& other) noexcept: lower(std::move(other.lower)), upper(std::move(other.upper)), empty(std::move(other.empty)) {}
+
+    SignedRange& operator=(const SignedRange& other) {
+        if (this != &other) {
+            lower = other.lower;
+            upper = other.upper;
+            empty = other.empty;
+        }
+        return *this;
+    }
+
+    SignedRange& operator=(SignedRange&& other) noexcept {
+        if (this != &other) {
+            lower = std::move(other.lower);
+            upper = std::move(other.upper);
+            empty = std::move(other.empty);
+        }
+        return *this;
+    }
+
+    bool operator==(const SignedRange& other) const {
+        return empty == other.empty && lower == other.lower && upper == other.upper;
+    }
+
+    bool operator!=(const SignedRange& other) const {
+        return !(*this == other);
+    }
+    
+    static SignedRange full(size_t sizeInBits = 64) {
         return SignedRange(min(sizeInBits), max(sizeInBits));
     }
 
     static SignedRange meet(SignedRange r1, SignedRange r2) {
-        if (r1.isempty()) return r2;
-        if (r2.isempty()) return r1;
+        if (r1.isEmpty()) return r2;
+        if (r2.isEmpty()) return r1;
 
         int64_t newLower = std::min(r1.lower, r2.lower);
         int64_t newUpper = std::max(r1.upper, r2.upper);
@@ -146,17 +179,17 @@ public:
     }
     
     // Maybe need for no nsw case.
-    SignedRange singedWrapCast(SignedRange range, size_t sizeInBits) requires std::is_same_v<T, uint64_t> {
-        if (range.empty() || sizeInBits == 0) return SignedRange(true);
+    SignedRange singedWrapCast(SignedRange range, size_t sizeInBits) {
+        if (range.isEmpty() || sizeInBits == 0) return SignedRange(true);
         if (sizeInBits >= 64) return range; // no change for 64 bit or larger types
 
         if (range.lower >> sizeInBits == range.upper >> sizeInBits) 
-            return SignedRange(range.lower & ((2 << sizeInBits) - 1) , range.upper & ((2 << sizeInBits) - 1));
+            return SignedRange(range.lower & ((1ULL << sizeInBits) - 1) , range.upper & ((1ULL << sizeInBits) - 1));
         else
-            return fullInBits(sizeInBits);
+            return full(sizeInBits);
     }
     
-    bool isempty() {
+    bool isEmpty() {
         return empty; 
     }
 
@@ -164,9 +197,8 @@ public:
         if (empty) return "empty";
         return "[" + std::to_string(lower) + ", " + std::to_string(upper) + "]";
     }
-}
+};
 
-template<typename T>
 class RangeAnalysis
     : public InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS> {
 private:
@@ -206,7 +238,8 @@ protected:
 
             // If either operand has an empty range, the result is also empty, as 
             //      value being empty implies we won't have any concrete value for the lhs.
-            if (rhs1.isempty() || rhs2.isempty()) 
+            // TODO: check if either of the sides are constants , if so then make a constant range for it
+            if (rhs1.isEmpty() || rhs2.isEmpty()) 
                 resultRange = SignedRange(true);
             else {
                 switch (binOp->getOpcode()) {
@@ -239,9 +272,9 @@ protected:
         return result;
     }
 
-    LatticeVal getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeVal parentoutput, Function*) {
+    LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput, Function*) {
         // Start with parent's output
-        LatticeVal result = parentOutput;
+        LatticeValT result = parentOutput;
 
         // We only care about conditional branches
         auto *br = dyn_cast<BranchInst>(parent);
@@ -353,7 +386,7 @@ protected:
 
         return result;
     }
-
+public:
     bool init(Function* F) {
 
         BasicBlock &entry = F->getEntryBlock();
@@ -371,7 +404,7 @@ protected:
         return true;
     }
 
-    LatticeVal getInstructionRanges(Instruction* I) {
+    LatticeValT getInstructionRanges(Instruction* I) {
         return out[I];
     }
 

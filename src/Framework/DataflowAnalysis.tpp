@@ -9,9 +9,9 @@ namespace framework {
 template <typename Node, typename T>
 struct GetNode;
 
-template <typename Derived, typename NodeT, typename LatticeVal, PASS_TYPE PassType, typename IteratorType>
+template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
 template <typename ... Args>
-void DataflowAnalysis<Derived, NodeT, LatticeVal, PassType, IteratorType>::initializeBlocks(Args ... args) {
+void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::initializeBlocks(Args ... args) {
     for (NodeT node : this->getIter(args ...)) {
         if (isEdgeNode(node, args ...)) {
             getNodeInput(node) = this->boundary();
@@ -23,9 +23,9 @@ void DataflowAnalysis<Derived, NodeT, LatticeVal, PassType, IteratorType>::initi
     }
 }
 
-template <typename Derived, typename NodeT, typename LatticeVal, PASS_TYPE PassType, typename IteratorType>
+template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
 template <typename ... Args>
-void DataflowAnalysis<Derived, NodeT, LatticeVal, PassType, IteratorType>::runImpl(Args ... args) {
+void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runImpl(Args ... args) {
     initializeBlocks(args ...);
 
     bool changed = true;
@@ -36,11 +36,11 @@ void DataflowAnalysis<Derived, NodeT, LatticeVal, PassType, IteratorType>::runIm
             if (isEdgeNode(node, args ...)) continue;
 
             // meet over all predecessors
-            LatticeVal newInput = this->top();
+            LatticeValT newInput = this->top();
             for (NodeT pNode : getNodePrev(node, args ...))
-                newInput = this->meet(newInput, getNodePathSensitiveOutput(node, pNode, get));
+                newInput = this->meet(newInput, getNodePathSensitiveOutput(node, pNode, getNodeOutput(pNode), args...));
 
-            LatticeVal newOutput = this->transfer(node, newInput);
+            LatticeValT newOutput = this->transfer(node, newInput);
 
             if (newInput != getNodeInput(node) || newOutput != getNodeOutput(node)) {
                 getNodeInput(node)  = newInput;

@@ -6,21 +6,21 @@
 
 namespace framework {
 
-template <typename Derived, typename NodeT, typename LatticeVal>
+template <typename Derived, typename NodeT, typename LatticeValT>
 requires std::is_pointer_v<NodeT>
-class KillGenHelper: public FrameworkHelper<KillGenHelper<Derived, NodeT, LatticeVal>, LatticeVal> {
+class KillGenHelper: public FrameworkHelper<KillGenHelper<Derived, NodeT, LatticeValT>, LatticeValT> {
 private:
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const { return static_cast<const Derived&>(*this); }; 
 
-    using BaseT = FrameworkHelper<KillGenHelper<Derived, NodeT, LatticeVal>, LatticeVal>;
+    using BaseT = FrameworkHelper<KillGenHelper<Derived, NodeT, LatticeValT>, LatticeValT>;
     friend BaseT;
 
     using itemType = BaseT::itemType;
 
 protected:
     template <typename ... Args>
-    LatticeVal killGenTransfer(NodeT node, LatticeVal& inVal, Args ... args) const { 
+    LatticeValT killGenTransfer(NodeT node, LatticeValT& inVal, Args ... args) const { 
         auto kill = this->unionOp(this->constKill(node, args ...), this->depKill(node, inVal, args ...)),
                 gen = this->unionOp(this->constGen(node, args ...), this->depGen(node, inVal, args ...));
 
@@ -30,17 +30,17 @@ protected:
 protected:
 // Interface:
     template <typename ... Args>
-    LatticeVal depGen(NodeT node, LatticeVal& inVal, Args ... args) const { return derived().depGen(node, inVal, args ...); } 
+    LatticeValT depGen(NodeT node, LatticeValT& inVal, Args ... args) const { return derived().depGen(node, inVal, args ...); } 
     template <typename ... Args>
-    LatticeVal constGen(NodeT node, Args ... args) const { return derived().constGen(node, args ...);  }
+    LatticeValT constGen(NodeT node, Args ... args) const { return derived().constGen(node, args ...);  }
     
     template <typename ... Args>
-    LatticeVal depKill(NodeT node, LatticeVal& inVal, Args ... args) const { return derived().depKill(node, inVal, args ...); }
+    LatticeValT depKill(NodeT node, LatticeValT& inVal, Args ... args) const { return derived().depKill(node, inVal, args ...); }
     template <typename ... Args>
-    LatticeVal constKill(NodeT node, Args ... args) const { return derived().constKill(node, args ...); };
+    LatticeValT constKill(NodeT node, Args ... args) const { return derived().constKill(node, args ...); };
 
     template <typename ... Args>
-    LatticeVal getUniverse(Args ... args) { return derived().getUniverse(args ...); } 
+    LatticeValT getUniverse(Args ... args) { return derived().getUniverse(args ...); } 
 };
 
 }

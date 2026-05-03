@@ -12,20 +12,19 @@ using namespace llvm;
 
 namespace framework {
 
-template <typename Derived, typename LatticeVal, PASS_TYPE PassType>
-class InstructionAnalysis: public DataflowAnalysis<InstructionAnalysis<Derived, LatticeVal, PassType>, Instruction*, LatticeVal, PassType> {
+template <typename Derived, typename LatticeValT, PASS_TYPE PassType>
+class InstructionAnalysis: public DataflowAnalysis<InstructionAnalysis<Derived, LatticeValT, PassType>, Instruction*, LatticeValT, PassType> {
 private:
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const { return static_cast<const Derived&>(*this); }
 
-    using BaseT = DataflowAnalysis<InstructionAnalysis<Derived, LatticeVal, PassType>, Instruction*, LatticeVal, PassType>;
+    using BaseT = DataflowAnalysis<InstructionAnalysis<Derived, LatticeValT, PassType>, Instruction*, LatticeValT, PassType>;
     friend BaseT;
 
     bool isLastInstruction(Instruction* I) { return &(I->getParent()->back()) == I; }
     bool isFirstInstruction(Instruction* I) { return &(I->getParent()->front()) == I; }
 
 protected: //implementing from DataflowAnalysis
-    using LatticeValT = BaseT::LatticeValT;
 
     std::vector<Instruction*> getNodePredecessors(Instruction* I, Function*);
     std::vector<Instruction*> getNodeSuccessors(Instruction* I, Function*);
@@ -42,7 +41,7 @@ protected:
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }
     LatticeValT transfer(Instruction* node, LatticeValT inVal) const { return derived().transfer(node, inVal); };
     
-    LatticeVal getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeVal parentOutput, Function* function) 
+    LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput, Function* function) 
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput, function); }
 
 public:

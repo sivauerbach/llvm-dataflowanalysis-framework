@@ -16,24 +16,23 @@ namespace framework {
 //  Generic fixed-point dataflow engine
 //
 //  Derived classes must provide:
-//    using LatticeVal = ...;          // type of per-block lattice element
-//    LatticeVal boundary();           // value for entry (fwd) or exit (bwd) block
-//    LatticeVal top();                // "uninitialized" / top-of-lattice value
-//    LatticeVal meet(LatticeVal, LatticeVal);  // meet (or join) operator
-//    LatticeVal transfer(BasicBlock*, LatticeVal in); // transfer function
+//    using LatticeValT = ...;          // type of per-block lattice element
+//    LatticeValT boundary();           // value for entry (fwd) or exit (bwd) block
+//    LatticeValT top();                // "uninitialized" / top-of-lattice value
+//    LatticeValT meet(LatticeValT, LatticeValT);  // meet (or join) operator
+//    LatticeValT transfer(BasicBlock*, LatticeValT in); // transfer function
 // ============================================================
-template <typename Derived, typename LatticeVal, 
+template <typename Derived, typename LatticeValT, 
             PASS_TYPE PassType>
-class BasicBlockAnalysis: public DataflowAnalysis<BasicBlockAnalysis<Derived, LatticeVal, PassType>, BasicBlock*, LatticeVal, PassType> {
+class BasicBlockAnalysis: public DataflowAnalysis<BasicBlockAnalysis<Derived, LatticeValT, PassType>, BasicBlock*, LatticeValT, PassType> {
 private:
-    using BaseT = DataflowAnalysis<BasicBlockAnalysis<Derived, LatticeVal, PassType>, BasicBlock*, LatticeVal, PassType>;
+    using BaseT = DataflowAnalysis<BasicBlockAnalysis<Derived, LatticeValT, PassType>, BasicBlock*, LatticeValT, PassType>;
     friend BaseT;
 
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const { return static_cast<const Derived&>(*this); }
 
 protected:  //implementing from DataflowAnalysis
-    using LatticeValT = BaseT::LatticeValT;
 
     auto getNodePredecessors(BasicBlock* B, Function*) { return predecessors(B); }
     auto getNodeSuccessors(BasicBlock* B, Function*) { return successors(B); }
@@ -58,7 +57,7 @@ protected:
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }
     LatticeValT transfer(BasicBlock* node, LatticeValT inVal) const { return derived().transfer(node, inVal); };
 
-    LatticeVal getNodePathSensitiveOutput(BasicBlock* node, BasicBlock* parent, LatticeVal parentOutput, Function* function) 
+    LatticeValT getNodePathSensitiveOutput(BasicBlock* node, BasicBlock* parent, LatticeValT parentOutput, Function* function) 
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput, function); }
 
 public:

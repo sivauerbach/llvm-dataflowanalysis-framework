@@ -3,6 +3,7 @@
 
 #include "Passes/DominatorsPass.hpp"
 #include "Passes/FaintPass.hpp"
+#include "Passes/RangePass.hpp"
 
 using namespace llvm;
 
@@ -29,6 +30,15 @@ extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
                    ArrayRef<PassBuilder::PipelineElement>) {
                     if (Name == "dominators") {
                         FPM.addPass(DominatorsPass{});
+                        return true;
+                    }                    
+                    return false;
+                });
+            PB.registerPipelineParsingCallback(
+                [](StringRef Name, FunctionPassManager& FPM,
+                   ArrayRef<PassBuilder::PipelineElement>) {
+                    if (Name == "range") {
+                        FPM.addPass(RangePass{});
                         return true;
                     }                    
                     return false;

@@ -10,40 +10,40 @@ using namespace llvm;
 
 namespace framework {
 namespace type_traits {
-template <typename LatticeVal>
+template <typename LatticeValT>
 struct isDenseSet: public std::false_type {};
 
-template <typename LatticeVal>
-struct isDenseSet<DenseSet<LatticeVal>>: public std::true_type {
-    using innerType = LatticeVal;
+template <typename LatticeValT>
+struct isDenseSet<DenseSet<LatticeValT>>: public std::true_type {
+    using innerType = LatticeValT;
 };
 }
 
-template <typename Derived, typename LatticeVal>
-requires type_traits::isDenseSet<LatticeVal>::value
+template <typename Derived, typename LatticeValT>
+requires type_traits::isDenseSet<LatticeValT>::value
 struct FrameworkHelper {
 private:
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const { return static_cast<const Derived&>(*this); }
 
-    LatticeVal universe;
+    LatticeValT universe;
 
 protected:
-    using itemType = type_traits::isDenseSet<LatticeVal>::innerType;
+    using itemType = type_traits::isDenseSet<LatticeValT>::innerType;
 
-    LatticeVal empty() const { return LatticeVal{ }; }
+    LatticeValT empty() const { return LatticeValT{ }; }
     
-    LatticeVal full() { return universe; }
-    const LatticeVal& full() const { return universe; }
+    LatticeValT full() { return universe; }
+    const LatticeValT& full() const { return universe; }
 
-    LatticeVal unionOp(const LatticeVal& lhs, const LatticeVal& rhs) const;
-    LatticeVal interserctionOp(const LatticeVal& lhs, const LatticeVal& rhs) const;
-    LatticeVal subtractOp(const LatticeVal& lhs, const LatticeVal& rhs) const;
+    LatticeValT unionOp(const LatticeValT& lhs, const LatticeValT& rhs) const;
+    LatticeValT interserctionOp(const LatticeValT& lhs, const LatticeValT& rhs) const;
+    LatticeValT subtractOp(const LatticeValT& lhs, const LatticeValT& rhs) const;
 
 protected:
 // Interface:
     template <typename ... Args>
-    LatticeVal getUniverse(Args ... args) { return derived().getUniverse(args ...); } 
+    LatticeValT getUniverse(Args ... args) { return derived().getUniverse(args ...); } 
 
 public:
     FrameworkHelper(): universe() { };
