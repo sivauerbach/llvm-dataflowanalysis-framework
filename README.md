@@ -1,4 +1,5 @@
-# Assignment 3 Code
+# Compiler Optimizations Final Project
+# Unified Dataflow Analysis Framework and Range Analysis Implementation
 
 This package contains:
 - `unifiedpass.cpp`: LLVM plugin with
@@ -6,11 +7,11 @@ This package contains:
   - set-print helper utilities
   - a fully wired Dominators, Dead Code Elimination, Loop Invariant Code Motion
   - pass registration for
+  - `range`
   - `dominators`
-  - `my-dce`
-  - `licm`
+  - `faint`
 - `Makefile`: build + run targets
-- `tests/`: 2 provided test inputs for each pass (`*.bc`)
+- `tests/`: 3 provided test inputs for each pass (`*.bc`)
 
 ## Build
 
@@ -24,6 +25,7 @@ This builds `build/unifiedpass.so`.
 
 ```bash
 make tests
+make opt
 ```
 
 This generates:
@@ -38,6 +40,6 @@ opt -bugpoint-enable-legacy-pm=1 \
   -passes='dominators' tests/dominators-m2r.bc -o /tmp/out.bc
 ```
 
-Replace `dominators` with one of: `my-dce`, `licm`.
+Replace `dominators` with one of: `my-dce`, `range`.
 
 
