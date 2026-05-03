@@ -5,6 +5,7 @@
 
 #include <limits>
 #include <type_traits>
+#include <string>
 
 using namespace llvm;
 using namespace framework;
@@ -66,10 +67,24 @@ bool willDivOverflow(T a, T b) requires std::is_integral_v<T> && std::is_signed<
 
 
 class SignedRange {
-private:
+public:
     int64_t lower;
     int64_t upper;
     bool empty;
+
+    static int64_t min(size_t sizeInBits) {
+        if (sizeInBits >= 64) 
+            return std::numeric_limits<int64_t>::min();
+
+        return -(2 << (sizeInBits - 1));
+    }
+
+    static int64_t max(size_t sizeInBits) {
+        if (sizeInBits >= 64) 
+            return std::numeric_limits<int64_t>::max();
+
+        return (2 << (sizeInBits - 1)) - 1;
+    }
 
 public:
     // constructor
@@ -77,11 +92,8 @@ public:
     SignedRange (int64_t _lower, int64_t _upper): lower(_lower), upper(_upper), empty(false) {}
     SignedRange (int64_t _lower, int64_t _upper, bool _empty): lower(_lower), upper(_upper), empty(_empty) {}
 
-    static fullInBits(size_t sizeInBits) {
-        if (sizeInBits >= 64) 
-            return SignedRange(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max());
-
-        return SignedRange(-(2 << (sizeInBits - 1)), (2 << (sizeInBits - 1)) - );
+    static full(size_t sizeInBits = 64) {
+        return SignedRange(min(sizeInBits), max(sizeInBits));
     }
 
     static SignedRange meet(SignedRange r1, SignedRange r2) {
@@ -93,14 +105,47 @@ public:
         return SignedRange(newLower, newUpper);
     }
 
-    static SignedRange addRanges(SignedRange r1, SignedRange r2) {
-        if (r1.isempty() || r2.isempty()) return SignedRange(true);
+    static SignedRange addRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits) {
+        int64_t newLower =0, newUpper = 0;
 
-        int64_t newLower = std::min(r1.lower, r2.lower);
-        int64_t newUpper = std::max(r1.upper, r2.upper);
-        return SignedRange(newLower, newUpper);
+        if (noSignedWrap) {
+            if (!willAddOverflow(r1.lower, r2.lower)) {
+                if (r1.lower + r2.lower > max(sizeInBits)) {
+                    return SignedRange(true);
+                } else {
+                    newLower = std::max(r1.lower + r2.lower, min(sizeInBits));
+                }
+            } else {
+                if (r1.lower < 0) {
+                    newLower = min(sizeInBits);
+                } else {
+                    return SignedRange(true);
+                }
+            }           
+            
+            if (!willAddOverflow(r1.upper, r2.upper)) {
+                if (r1.upper + r2.upper < min(sizeInBits)) {
+                    return SignedRange(true);
+                } else {
+                    newUpper = std::min(r1.upper + r2.upper, max(sizeInBits));
+                }
+            } else {
+                if (r1.upper > 0) {
+                    newUpper = max(sizeInBits);
+                } else {
+                    return SignedRange(true);
+                }
+            }
+
+            return SignedRange(newLower, newUpper);  
+        } else {
+            // For starters, we assume only NSW, NUW operations will be used, so we can just return the full range for the result.
+        
+            return SignedRange(min(sizeInBits), max(sizeInBits));
+        }
     }
     
+    // Maybe need for no nsw case.
     SignedRange singedWrapCast(SignedRange range, size_t sizeInBits) requires std::is_same_v<T, uint64_t> {
         if (range.empty() || sizeInBits == 0) return SignedRange(true);
         if (sizeInBits >= 64) return range; // no change for 64 bit or larger types
@@ -109,23 +154,29 @@ public:
             return SignedRange(range.lower & ((2 << sizeInBits) - 1) , range.upper & ((2 << sizeInBits) - 1));
         else
             return fullInBits(sizeInBits);
-
     }
     
-
     bool isempty() {
         return empty; 
+    }
+
+    std::string getRangeString() const {
+        if (empty) return "empty";
+        return "[" + std::to_string(lower) + ", " + std::to_string(upper) + "]";
     }
 }
 
 template<typename T>
 class RangeAnalysis
-    : public InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>,
+    : public InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS> {
+private:
+    LatticeValT boundaryLatticeVal;
+
 protected:
     friend InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>;
 
     LatticeValT top() const { return LatticeValT{ }; } 
-    LatticeValT boundary() const { return LatticeValT{ }; }
+    LatticeValT boundary() const { return boundaryLatticeVal; }
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const {     
         DenseMap<Value*, SignedRange> result = lhs;
         
@@ -151,24 +202,35 @@ protected:
         if (binOp) {
             // Both operands of the binary operator should be in the inVal map as they must be defined before using them.
             SignedRange rhs1 = inVal[binOp->getOperand(0)], rhs2 = inVal[binOp->getOperand(1)], 
-                resultRange = SignedRange::fullInBits(lhs->getType()->getIntegerBitWidth());
+                resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth());
 
-            switch (binOp->getOpcode()) {
-                case Instruction::Add: 
-                    
-                    break;
-                case Instruction::Sub: 
-                    
-                    break;
-                case Instruction::Mul: 
-                    
-                    break;
+            // If either operand has an empty range, the result is also empty, as 
+            //      value being empty implies we won't have any concrete value for the lhs.
+            if (rhs1.isempty() || rhs2.isempty()) 
+                resultRange = SignedRange(true);
+            else {
+                switch (binOp->getOpcode()) {
+                    case Instruction::Add: 
+                        resultRange = SignedRange::addRanges(rhs1, rhs2, binOp->hasNoSignedWrap(), lhs->getType()->getIntegerBitWidth());
+                        
+                        break;
+                    case Instruction::Sub: 
+                    // TODO: add check for edge cases for subtraction overflow, e.g. min - 1, max - (-1)
+                        resultRange = SignedRange::addRanges(rhs1, SignedRange(-rhs2.upper, -rhs2.lower), binOp->hasNoSignedWrap(), lhs->getType()->getIntegerBitWidth());
+                        break;
+                    case Instruction::Mul: 
+                        
+                        break;
 
-                case Instruction::SDiv:
-                    break;
+                    case Instruction::SDiv:
+                        break;
 
-                default: 
-                    break;
+                    case Instruction::UDiv:
+                        break;
+
+                    default: 
+                        break;
+                }
             }
 
             result[lhs] = resultRange;
@@ -177,9 +239,147 @@ protected:
         return result;
     }
 
+    LatticeVal getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeVal parentoutput, Function*) {
+        // Start with parent's output
+        LatticeVal result = parentOutput;
+
+        // We only care about conditional branches
+        auto *br = dyn_cast<BranchInst>(parent);
+        if (!br || !br->isConditional())
+            return result;
+
+        Value *cond = br->getCondition();
+
+        auto *icmp = dyn_cast<ICmpInst>(cond);
+        if (!icmp)
+            return result;
+
+        // Determine whether node is on TRUE or FALSE edge
+        BasicBlock *trueBB  = br->getSuccessor(0);
+        BasicBlock *falseBB = br->getSuccessor(1);
+
+        BasicBlock *childBB = node->getParent();
+
+        bool takingTrueEdge = (childBB == trueBB);
+        bool takingFalseEdge = (childBB == falseBB);
+
+        if (!takingTrueEdge && !takingFalseEdge)
+            return result;
+
+        Value *lhs = icmp->getOperand(0);
+        Value *rhs = icmp->getOperand(1);
+
+        // Only handle variable op constant for now
+        auto *c = dyn_cast<ConstantInt>(rhs);
+        if (!c)
+            return result;
+
+        int64_t constant = c->getSExtValue();
+
+        // Current range
+        SignedRange oldRange = result[lhs];
+
+        SignedRange refined = oldRange;
+
+        ICmpInst::Predicate pred = icmp->getPredicate();
+
+        // Refine according to edge taken
+        if (takingTrueEdge) {
+
+            switch (pred) {
+                case ICmpInst::ICMP_SGT:
+                    refined.lower = std::max(oldRange.lower, constant + 1);
+                    break;
+
+                case ICmpInst::ICMP_SGE:
+                    refined.lower = std::max(oldRange.lower, constant);
+                    break;
+
+                case ICmpInst::ICMP_SLT:
+                    refined.upper = std::min(oldRange.upper, constant - 1);
+                    break;
+
+                case ICmpInst::ICMP_SLE:
+                    refined.upper = std::min(oldRange.upper, constant);
+                    break;
+
+                case ICmpInst::ICMP_EQ:
+                    refined.lower = constant;
+                    refined.upper = constant;
+                    break;
+
+                case ICmpInst::ICMP_NE:
+                    // harder to represent with intervals
+                    break;
+
+                default:
+                    break;
+            }
+
+        } else if (takingFalseEdge) {
+
+            switch (pred) {
+                case ICmpInst::ICMP_SGT:
+                    refined.upper = std::min(oldRange.upper, constant);
+                    break;
+
+                case ICmpInst::ICMP_SGE:
+                    refined.upper = std::min(oldRange.upper, constant - 1);
+                    break;
+
+                case ICmpInst::ICMP_SLT:
+                    refined.lower = std::max(oldRange.lower, constant);
+                    break;
+
+                case ICmpInst::ICMP_SLE:
+                    refined.lower = std::max(oldRange.lower, constant + 1);
+                    break;
+
+                case ICmpInst::ICMP_EQ:
+                    // not equal
+                    break;
+
+                case ICmpInst::ICMP_NE:
+                    refined.lower = constant;
+                    refined.upper = constant;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        result[lhs] = refined;
+
+        return result;
+    }
+
+    bool init(Function* F) {
+
+        BasicBlock &entry = F->getEntryBlock();
+
+        for (Argument &Arg : F->args()) {
+
+            // Only handle integer arguments
+            if (!Arg.getType()->isIntegerTy())
+                continue;
+
+            unsigned numBits = Arg.getType()->getIntegerBitWidth();
+            boundaryLatticeVal[static_cast<Value*>(&Arg)] = SignedRange::full(numBits);
+        }
+
+        return true;
+    }
+
+    LatticeVal getInstructionRanges(Instruction* I) {
+        return out[I];
+    }
+
 public:
     RangeAnalysis(): 
-        InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>() { }
+        InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>(),
+        boundaryLatticeVal() 
+    { }
 
 };
 

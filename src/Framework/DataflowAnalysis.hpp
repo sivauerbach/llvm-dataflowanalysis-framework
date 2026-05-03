@@ -73,6 +73,10 @@ protected:
     bool isExitNode(NodeT node, Args ... args) { return derived().isExitNode(node, args ...); }
 
     template <typename ... Args>
+    LatticeVal getNodePathSensitiveOutput(NodeT node, NodeT parent, LatticeVal parentOutput, Args ... args) 
+        { return derived().getNodePathSensitiveOutput(node, parent, parentOutput, args ...); }
+
+    template <typename ... Args>
     auto getIter(Args ... args) { return derived().getIter(args ...); }
 
     LatticeValT top() const { return derived().top(); } 

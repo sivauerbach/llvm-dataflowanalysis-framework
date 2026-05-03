@@ -38,7 +38,7 @@ void DataflowAnalysis<Derived, NodeT, LatticeVal, PassType, IteratorType>::runIm
             // meet over all predecessors
             LatticeVal newInput = this->top();
             for (NodeT pNode : getNodePrev(node, args ...))
-                newInput = this->meet(newInput, getNodeOutput(pNode));
+                newInput = this->meet(newInput, getNodePathSensitiveOutput(node, pNode, get));
 
             LatticeVal newOutput = this->transfer(node, newInput);
 

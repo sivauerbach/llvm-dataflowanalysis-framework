@@ -19,6 +19,8 @@ protected:
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return this->interserctionOp(lhs, rhs); } 
     LatticeValT transfer(BasicBlock* B, LatticeValT inVal) const;
 
+    LatticeVal getNodePathSensitiveOutput(BasicBlock*, BasicBlock*, LatticeVal parentOutput, Function*) { return output; }
+
     LatticeValT getUniverse(Function* function) { 
         LatticeValT S;
         
