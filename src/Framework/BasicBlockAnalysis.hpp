@@ -32,7 +32,7 @@ private:
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const { return static_cast<const Derived&>(*this); }
 
-protected:
+protected:  //implementing from DataflowAnalysis
     using LatticeValT = BaseT::LatticeValT;
 
     auto getNodePredecessors(BasicBlock* B, Function*) { return predecessors(B); }
@@ -52,7 +52,7 @@ protected:
     }
 
 protected:
-    // Interface:
+    // Interface: (To be implemented by derived class)
     LatticeValT top() const { return derived().top(); } 
     LatticeValT boundary() const { return derived().boundary(); }
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }

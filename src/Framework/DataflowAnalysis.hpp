@@ -61,7 +61,7 @@ protected:
     void runImpl(Args ... args);
 
 protected:
-    // Interface:
+    // Interface: (To be implemented by derived class)
     template <typename ... Args>
     auto getNodePredecessors(NodeT node, Args ... args) { return derived().getNodePredecessors(node, args ...); };
     template <typename ... Args>

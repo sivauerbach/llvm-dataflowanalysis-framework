@@ -24,7 +24,7 @@ private:
     bool isLastInstruction(Instruction* I) { return &(I->getParent()->back()) == I; }
     bool isFirstInstruction(Instruction* I) { return &(I->getParent()->front()) == I; }
 
-protected:
+protected: //implementing from DataflowAnalysis
     using LatticeValT = BaseT::LatticeValT;
 
     std::vector<Instruction*> getNodePredecessors(Instruction* I, Function*);
@@ -35,8 +35,8 @@ protected:
 
     std::vector<Instruction*> getIter(Function* F);
 
-protected:
-    // Interface:
+protected: 
+    // Interface: (To be implemented by derived class)
     LatticeValT top() const { return derived().top(); } 
     LatticeValT boundary() const { return derived().boundary(); }
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }

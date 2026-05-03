@@ -10,7 +10,7 @@ using namespace framework;
 class DominatorAnalysis
     : public BasicBlockAnalysis<DominatorAnalysis, DenseSet<BasicBlock*>, PASS_TYPE::FORWARDS>,
       public FrameworkHelper<DominatorAnalysis, DenseSet<BasicBlock*>> {
-public:
+protected:
     friend BasicBlockAnalysis<DominatorAnalysis, DenseSet<BasicBlock*>, PASS_TYPE::FORWARDS>;
     friend FrameworkHelper<DominatorAnalysis, DenseSet<BasicBlock*>>;
 
