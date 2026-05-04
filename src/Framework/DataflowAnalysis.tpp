@@ -34,44 +34,49 @@ void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runI
 template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
 template <typename ... Args>
 void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runPhase(PHASE phase, Args ... args) {
-    auto& iter = derived().getIter(args ...);
-    std::vector<NodeT> worklist(iter.begin(), iter.end());
+    std::vector<NodeT> worklist(derived().getIter(args ...));
     DenseMap<NodeT, size_t> visits;
 
     while (! worklist.empty()) {
-        visits[NodeT node = worklist.pop()]++;
-        if (isEdgeNode(node, args ...)) continue;
+        NodeT node = worklist.front();
+        visits[node]++;
+        if (isEdgeNode(node, args ...)) {
+            worklist.erase(worklist.begin());
+            continue;
+        }
 
         // Meet over all predecessors
         LatticeValT newInput = derived().top();
         for (NodeT pNode : derived().getNodePrev(node, args ...))
-            newInput = derived().meet(newInput, derived().getNodePathSensitiveOutput(node, pNode, getNodeOutput(pNode), args...));
+            newInput = derived().meet(newInput, derived().getNodePathSensitiveOutput(node, pNode, getNodeOutput(pNode)));
 
         // Transfer fucntion
-        LatticeValT candidate = derived().transfer(node, newInput), newOut;
+        LatticeValT candidate = derived().transfer(node, newInput), newOutput;
 
-        // Widening/Nerrowing
+        // Widening/Narrowing
         switch (phase) {
             case PHASE::WIDENING:
                 if (derived().getNodeOutput(node) == derived().top()) {
-                    newOut = candidate;
+                    newOutput = candidate;
                 } else {
-                    derived().widen(candidate, derived().getNodeOutput(node), visits[node]);
+                    newOutput = derived().widen(candidate, derived().getNodeOutput(node), visits[node]);
                 }
                 break;
         
             case PHASE::NARROWING:
-                derived().narrow(candidate, derived().getNodeOutput(node));
+                newOutput = derived().narrow(candidate, derived().getNodeOutput(node));
         }
 
         if (newInput != derived().getNodeInput(node) || newOutput != derived().getNodeOutput(node)) {
             derived().getNodeInput(node)  = newInput;
             derived().getNodeOutput(node) = newOutput;
             
-            for (NodeT succ : derived().getNodeNext(node)) {
-                worklist.push(Succ);
+            for (NodeT succ : derived().getNodeNext(node, args ...)) {
+                worklist.push_back(succ);
             }
         }
+
+        worklist.erase(worklist.begin());
     }
 }
 

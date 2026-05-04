@@ -95,9 +95,12 @@ protected:
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }
     LatticeValT transfer(NodeT node, LatticeValT inVal) const { return derived().transfer(node, inVal); }
     
-    LatticeValT nerrow(LatticeValT outVal, LatticeValT oldOutVal) const { (void) oldOutVal; return outVal }
-    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const { (void) oldOutVal, visits; return outVal }
-    LatticeValT getNodePathSensitiveOutput(NodeT node, NodeT parent, LatticeValT parentOutput) { (void) node, parent; return parentOutput }
+    LatticeValT narrow(LatticeValT outVal, LatticeValT oldOutVal) const
+        { return derived().narrow(outVal, oldOutVal); }
+    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
+        { return derived().widen(outVal, oldOutVal, visits); }
+    LatticeValT getNodePathSensitiveOutput(NodeT node, NodeT parent, LatticeValT parentOutput) 
+        { return derived().getNodePathSensitiveOutput(node, parent, parentOutput); }
  
 public:
     DataflowAnalysis(): in(), out() { };

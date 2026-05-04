@@ -58,12 +58,12 @@ protected:
     LatticeValT transfer(BasicBlock* node, LatticeValT inVal) const { return derived().transfer(node, inVal); }
 
     // Overridable (have default implementation)
-    LatticeValT nerrow(LatticeValT outVal, LatticeValT oldOutVal) const 
-        { return derived().nerrow(outVal, oldOutVal); }
+    LatticeValT narrow(LatticeValT outVal, LatticeValT oldOutVal) const 
+        { return derived().narrow(outVal, oldOutVal); }
     LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
         { return derived().widen(outVal, oldOutVal, visits); }
-    LatticeValT getNodePathSensitiveOutput(BasicBlock* node, BasicBlock* parent, LatticeValT parentOutput, Function* function) 
-        { return derived().getNodePathSensitiveOutput(node, parent, parentOutput, function); }
+    LatticeValT getNodePathSensitiveOutput(BasicBlock* node, BasicBlock* parent, LatticeValT parentOutput) 
+        { return derived().getNodePathSensitiveOutput(node, parent, parentOutput); }
 
 public:
     void run(Function* function) { this->runImpl(function); }

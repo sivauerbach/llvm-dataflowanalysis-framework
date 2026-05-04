@@ -2,6 +2,7 @@
 #define RANGE_ANALYSIS_HPP
 
 #include "Framework/InstructionAnalysis.hpp"
+
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instructions.h>
 #include "llvm/IR/Constants.h"
@@ -185,7 +186,7 @@ public:
     }
     
     // Maybe need for no nsw case.
-    SignedRange singedWrapCast(SignedRange range, size_t sizeInBits) {
+    static SignedRange singedWrapCast(SignedRange range, size_t sizeInBits) {
         if (range.isEmpty() || sizeInBits == 0) return SignedRange(true);
         if (sizeInBits >= 64) return range; // no change for 64 bit or larger types
 
@@ -230,7 +231,7 @@ protected:
         return result;    
     } 
 
-    SignedRange getRangeFromValue(Value* value, const LatticeValT& inVal) {
+    SignedRange getRangeFromValue(Value* value, LatticeValT& inVal) const {
         if (auto *CI = dyn_cast<ConstantInt>(value)) {
             int64_t value = CI->getValue().getSExtValue();
             return SignedRange(value, value);
@@ -252,7 +253,7 @@ protected:
 
         if (auto binOp = dyn_cast<BinaryOperator>(I)) {
             // Both operands of the binary operator should be in the inVal map as they must be defined before using them.
-            SignedRange rhs1 = getRangeFromValue(binOp->getOperand(0), inVal), getRangeFromValue(binOp->getOperand(1), inVal), 
+            SignedRange rhs1 = getRangeFromValue(binOp->getOperand(0), inVal), rhs2 = getRangeFromValue(binOp->getOperand(1), inVal), 
                 resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth());
 
             // If either operand has an empty range, the result is also empty, as 
@@ -287,21 +288,21 @@ protected:
 
             result[lhs] = resultRange;
         } else if (auto *PhiIns = dyn_cast<PHINode>(I)) {
-            SignedRange resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth())
+            SignedRange resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth());
 
             for (size_t i = 0; i < PhiIns->getNumIncomingValues(); i++) {
-                SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i));
+                SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i), inVal));
             }
 
             result[lhs] = resultRange;
-        } else if (ConstantInt *ConstInstraction = dyn_cast<ConstantInt>(V)) {
-            result[lhs] = SignedRange(ConstInstraction->getSExtValue(), ConstInstraction->getSExtValue())
+        } else if (ConstantInt *ConstInstraction = dyn_cast<ConstantInt>(lhs)) {
+            result[lhs] = SignedRange(ConstInstraction->getSExtValue(), ConstInstraction->getSExtValue());
         } else if (auto *SignExtIns = dyn_cast<SExtInst>(I)) {
-            result[lhs] = getRangeFromValue(SE->getOperand(0));
+            result[lhs] = getRangeFromValue(SignExtIns->getOperand(0), inVal);
         } else if (auto *TruncIns = dyn_cast<TruncInst>(I)) {
             if (auto dstType = dyn_cast<IntegerType>(TruncIns->getDestTy())) {
                 result[lhs] = SignedRange::singedWrapCast(
-                    getRangeFromValue(TruncIns->getOperand(0)), 
+                    getRangeFromValue(TruncIns->getOperand(0), inVal),
                     dstType->getBitWidth());
             }
         }
@@ -309,7 +310,9 @@ protected:
         return result;
     }
 
-    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) override const { 
+    LatticeValT narrow(LatticeValT outVal, LatticeValT) const { return outVal; }
+
+    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const { 
         DenseMap<Value*, SignedRange> result = outVal;
         
         if (visits > widdeningTreshold) {            
@@ -323,7 +326,7 @@ protected:
         return result;   
     }
 
-    LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput, Function*) {
+    LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput) {
         // Start with parent's output
         LatticeValT result = parentOutput;
 
