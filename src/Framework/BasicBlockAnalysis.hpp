@@ -55,8 +55,13 @@ protected:
     LatticeValT top() const { return derived().top(); } 
     LatticeValT boundary() const { return derived().boundary(); }
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }
-    LatticeValT transfer(BasicBlock* node, LatticeValT inVal) const { return derived().transfer(node, inVal); };
+    LatticeValT transfer(BasicBlock* node, LatticeValT inVal) const { return derived().transfer(node, inVal); }
 
+    // Overridable (have default implementation)
+    LatticeValT nerrow(LatticeValT outVal, LatticeValT oldOutVal) const 
+        { return derived().nerrow(outVal, oldOutVal); }
+    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
+        { return derived().widen(outVal, oldOutVal, visits); }
     LatticeValT getNodePathSensitiveOutput(BasicBlock* node, BasicBlock* parent, LatticeValT parentOutput, Function* function) 
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput, function); }
 

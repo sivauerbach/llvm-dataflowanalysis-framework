@@ -24,7 +24,6 @@ private:
     LatticeValT depKill(Instruction* I, LatticeValT& inVal) const;
     LatticeValT constKill(Instruction* I) const;
     
-    LatticeValT getNodePathSensitiveOutput(Instruction*, Instruction*, LatticeValT parentOutput, Function*) { return parentOutput; }
     LatticeValT getUniverse(Function* function);
 
     LatticeValT transfer(Instruction* I, LatticeValT& inVal) const { 

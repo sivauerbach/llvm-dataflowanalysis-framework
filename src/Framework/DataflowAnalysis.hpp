@@ -30,6 +30,11 @@ private:
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const { return static_cast<const Derived&>(*this); }
 
+    enum class PHASE {
+        WIDENING,
+        NARROWING 
+    };
+
     template <typename ... Args>
     void initializeBlocks(Args ... args);
 
@@ -38,6 +43,15 @@ private:
     
     template <typename ... Args>
     auto getNodePrev(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().getNodeSuccessors(node, args ...); }
+
+    template <typename ... Args>
+    auto getNodeNext(NodeT node, Args ... args) requires type_traits::isForword<PassType>::value { return derived().getNodeSuccessors(node, args ...); }
+    
+    template <typename ... Args>
+    auto getNodeNext(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().getNodePredecessors(node, args ...); }
+
+    template <typename ... Args>
+    void runPhase(PHASE phase, Args ... args);
 
 protected:
     using LatticeValT = LatticeValTemplate;
@@ -50,7 +64,8 @@ protected:
     
     template <typename ... Args>
     bool isEdgeNode(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().isExitNode(node, args ...); }
-    
+
+protected:
     LatticeValT& getNodeOutput(NodeT node) requires type_traits::isForword<PassType>::value { return out[node]; }
     LatticeValT& getNodeOutput(NodeT node) requires type_traits::isBackwards<PassType>::value { return in[node]; }
 
@@ -73,17 +88,17 @@ protected:
     bool isExitNode(NodeT node, Args ... args) { return derived().isExitNode(node, args ...); }
 
     template <typename ... Args>
-    LatticeValT getNodePathSensitiveOutput(NodeT node, NodeT parent, LatticeValT parentOutput, Args ... args) 
-        { return derived().getNodePathSensitiveOutput(node, parent, parentOutput, args ...); }
-
-    template <typename ... Args>
     auto getIter(Args ... args) { return derived().getIter(args ...); }
 
     LatticeValT top() const { return derived().top(); } 
     LatticeValT boundary() const { return derived().boundary(); }
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }
-    LatticeValT transfer(NodeT node, LatticeValT inVal) const { return derived().transfer(node, inVal); };
+    LatticeValT transfer(NodeT node, LatticeValT inVal) const { return derived().transfer(node, inVal); }
     
+    LatticeValT nerrow(LatticeValT outVal, LatticeValT oldOutVal) const { (void) oldOutVal; return outVal }
+    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const { (void) oldOutVal, visits; return outVal }
+    LatticeValT getNodePathSensitiveOutput(NodeT node, NodeT parent, LatticeValT parentOutput) { (void) node, parent; return parentOutput }
+ 
 public:
     DataflowAnalysis(): in(), out() { };
 };    

@@ -12,13 +12,13 @@ struct GetNode;
 template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
 template <typename ... Args>
 void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::initializeBlocks(Args ... args) {
-    for (NodeT node : this->getIter(args ...)) {
+    for (NodeT node : derived().getIter(args ...)) {
         if (isEdgeNode(node, args ...)) {
-            getNodeInput(node) = this->boundary();
-            getNodeOutput(node) = this->transfer(node, getNodeInput(node));
+            derived().getNodeInput(node) = derived().boundary();
+            derived().getNodeOutput(node) = derived().transfer(node, getNodeInput(node));
         } else {
-            getNodeInput(node) = this->top();
-            getNodeOutput(node) = this->top();
+            derived().getNodeInput(node) = derived().top();
+            derived().getNodeOutput(node) = derived().top();
         }
     }
 }
@@ -26,26 +26,50 @@ void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::init
 template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
 template <typename ... Args>
 void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runImpl(Args ... args) {
-    initializeBlocks(args ...);
+    derived().initializeBlocks(args ...);
+    derived().runPhase(PHASE::WIDENING, args ...);
+    derived().runPhase(PHASE::NARROWING, args ...);
+}
 
-    bool changed = true;
-    while (changed) {
-        changed = false;
+template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
+template <typename ... Args>
+void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runPhase(PHASE phase, Args ... args) {
+    auto& iter = derived().getIter(args ...);
+    std::vector<NodeT> worklist(iter.begin(), iter.end());
+    DenseMap<NodeT, size_t> visits;
 
-        for (NodeT node : this->getIter(args ...)) {
-            if (isEdgeNode(node, args ...)) continue;
+    while (! worklist.empty()) {
+        visits[NodeT node = worklist.pop()]++;
+        if (isEdgeNode(node, args ...)) continue;
 
-            // meet over all predecessors
-            LatticeValT newInput = this->top();
-            for (NodeT pNode : getNodePrev(node, args ...))
-                newInput = this->meet(newInput, getNodePathSensitiveOutput(node, pNode, getNodeOutput(pNode), args...));
+        // Meet over all predecessors
+        LatticeValT newInput = derived().top();
+        for (NodeT pNode : derived().getNodePrev(node, args ...))
+            newInput = derived().meet(newInput, derived().getNodePathSensitiveOutput(node, pNode, getNodeOutput(pNode), args...));
 
-            LatticeValT newOutput = this->transfer(node, newInput);
+        // Transfer fucntion
+        LatticeValT candidate = derived().transfer(node, newInput), newOut;
 
-            if (newInput != getNodeInput(node) || newOutput != getNodeOutput(node)) {
-                getNodeInput(node)  = newInput;
-                getNodeOutput(node) = newOutput;
-                changed = true;
+        // Widening/Nerrowing
+        switch (phase) {
+            case PHASE::WIDENING:
+                if (derived().getNodeOutput(node) == derived().top()) {
+                    newOut = candidate;
+                } else {
+                    derived().widen(candidate, derived().getNodeOutput(node), visits[node]);
+                }
+                break;
+        
+            case PHASE::NARROWING:
+                derived().narrow(candidate, derived().getNodeOutput(node));
+        }
+
+        if (newInput != derived().getNodeInput(node) || newOutput != derived().getNodeOutput(node)) {
+            derived().getNodeInput(node)  = newInput;
+            derived().getNodeOutput(node) = newOutput;
+            
+            for (NodeT succ : derived().getNodeNext(node)) {
+                worklist.push(Succ);
             }
         }
     }

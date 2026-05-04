@@ -138,6 +138,12 @@ public:
         return SignedRange(newLower, newUpper);
     }
 
+    static SignedRange widen(SignedRange r1, SignedRange r2) {
+        // As we are on a finite lattice, when assuming that the range is int64_t,
+        //      instead of being agresive when widening, we may take the higest lower bound, a.k.a meet.
+        return SignedRange::meet(r1, r2); 
+    }
+
     static SignedRange addRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits) {
         int64_t newLower =0, newUpper = 0;
 
@@ -202,6 +208,7 @@ public:
 class RangeAnalysis
     : public InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS> {
 private:
+    size_t widdeningTreshold;
     LatticeValT boundaryLatticeVal;
 
 protected:
@@ -223,17 +230,29 @@ protected:
         return result;    
     } 
 
+    SignedRange getRangeFromValue(Value* value, const LatticeValT& inVal) {
+        if (auto *CI = dyn_cast<ConstantInt>(value)) {
+            int64_t value = CI->getValue().getSExtValue();
+            return SignedRange(value, value);
+        }
+        
+        if (inVal.contains(value)) {
+            return inVal[value];
+        }
+
+        return SignedRange();
+    }
+
     LatticeValT transfer(Instruction* I, LatticeValT inVal) const {
         // non-assignment instruction does not modify the range of any variable
         if (!I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return inVal;
 
         Value* lhs = I;
         LatticeValT result = inVal;
-        BinaryOperator* binOp = dyn_cast<BinaryOperator>(I);
-        
-        if (binOp) {
+
+        if (auto binOp = dyn_cast<BinaryOperator>(I)) {
             // Both operands of the binary operator should be in the inVal map as they must be defined before using them.
-            SignedRange rhs1 = inVal[binOp->getOperand(0)], rhs2 = inVal[binOp->getOperand(1)], 
+            SignedRange rhs1 = getRangeFromValue(binOp->getOperand(0), inVal), getRangeFromValue(binOp->getOperand(1), inVal), 
                 resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth());
 
             // If either operand has an empty range, the result is also empty, as 
@@ -267,9 +286,41 @@ protected:
             }
 
             result[lhs] = resultRange;
+        } else if (auto *PhiIns = dyn_cast<PHINode>(I)) {
+            SignedRange resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth())
+
+            for (size_t i = 0; i < PhiIns->getNumIncomingValues(); i++) {
+                SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i));
+            }
+
+            result[lhs] = resultRange;
+        } else if (ConstantInt *ConstInstraction = dyn_cast<ConstantInt>(V)) {
+            result[lhs] = SignedRange(ConstInstraction->getSExtValue(), ConstInstraction->getSExtValue())
+        } else if (auto *SignExtIns = dyn_cast<SExtInst>(I)) {
+            result[lhs] = getRangeFromValue(SE->getOperand(0));
+        } else if (auto *TruncIns = dyn_cast<TruncInst>(I)) {
+            if (auto dstType = dyn_cast<IntegerType>(TruncIns->getDestTy())) {
+                result[lhs] = SignedRange::singedWrapCast(
+                    getRangeFromValue(TruncIns->getOperand(0)), 
+                    dstType->getBitWidth());
+            }
         }
 
         return result;
+    }
+
+    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) override const { 
+        DenseMap<Value*, SignedRange> result = outVal;
+        
+        if (visits > widdeningTreshold) {            
+            for (auto &entry : oldOutVal) {
+                if (result.contains(entry.first)) {
+                    result[entry.first] = SignedRange::widen(result[entry.first], entry.second); 
+                }
+            }   
+        }
+
+        return result;   
     }
 
     LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput, Function*) {
@@ -409,8 +460,9 @@ public:
     }
 
 public:
-    RangeAnalysis(): 
+    explicit RangeAnalysis(size_t _widdeningTreshold = 5): 
         InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>(),
+        widdeningTreshold(_widdeningTreshold),
         boundaryLatticeVal() 
     { }
 
