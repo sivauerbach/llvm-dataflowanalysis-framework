@@ -58,10 +58,10 @@ protected:
     LatticeValT transfer(BasicBlock* node, LatticeValT inVal) const { return derived().transfer(node, inVal); }
 
     // Overridable (have default implementation)
-    LatticeValT narrow(LatticeValT outVal, LatticeValT oldOutVal) const 
-        { return derived().narrow(outVal, oldOutVal); }
-    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
-        { return derived().widen(outVal, oldOutVal, visits); }
+    LatticeValT narrow(BasicBlock* node, LatticeValT outVal, LatticeValT oldOutVal) const 
+        { return derived().narrow(node, outVal, oldOutVal); }
+    LatticeValT widen(BasicBlock* node, LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
+        { return derived().widen(node, outVal, oldOutVal, visits); }
     LatticeValT getNodePathSensitiveOutput(BasicBlock* node, BasicBlock* parent, LatticeValT parentOutput) 
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput); }
 

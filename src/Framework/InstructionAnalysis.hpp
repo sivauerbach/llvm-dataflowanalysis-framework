@@ -41,10 +41,10 @@ protected:
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return derived().meet(lhs, rhs); }
     LatticeValT transfer(Instruction* node, LatticeValT inVal) const { return derived().transfer(node, inVal); };
     
-    LatticeValT narrow(LatticeValT outVal, LatticeValT oldOutVal) const 
-        { return derived().narrow(outVal, oldOutVal); }
-    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
-        { return derived().widen(outVal, oldOutVal, visits); }
+    LatticeValT narrow(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal) const 
+        { return derived().narrow(I, outVal, oldOutVal); }
+    LatticeValT widen(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const 
+        { return derived().widen(I, outVal, oldOutVal, visits); }
     LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput) 
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput); }
 

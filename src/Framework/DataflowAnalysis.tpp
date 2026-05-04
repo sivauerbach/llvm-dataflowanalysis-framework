@@ -59,12 +59,12 @@ void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runP
                 if (derived().getNodeOutput(node) == derived().top()) {
                     newOutput = candidate;
                 } else {
-                    newOutput = derived().widen(candidate, derived().getNodeOutput(node), visits[node]);
+                    newOutput = derived().widen(node, candidate, derived().getNodeOutput(node), visits[node]);
                 }
                 break;
         
             case PHASE::NARROWING:
-                newOutput = derived().narrow(candidate, derived().getNodeOutput(node));
+                newOutput = derived().narrow(node, candidate, derived().getNodeOutput(node));
         }
 
         if (newInput != derived().getNodeInput(node) || newOutput != derived().getNodeOutput(node)) {

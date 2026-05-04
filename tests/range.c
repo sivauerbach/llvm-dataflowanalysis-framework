@@ -23,3 +23,24 @@ int test_shrink_range(int a, int16_t b, int8_t c) {
 
     return d;
 }
+
+int test_phi(int a, int b) {
+    int c;
+    if (a > 5) {
+        c = 21;
+        // expected range for c: [21, 21]
+    } else {
+        c = 20;
+        // expected range for c: [20, 20]
+    }
+
+    // expected range for c: [20, 21]
+    return c;
+}
+
+int test_widen(int a) {
+    while (a < 100) {
+        a = a + 1;
+    }
+    return a;
+}

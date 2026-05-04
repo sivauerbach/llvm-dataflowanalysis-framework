@@ -139,10 +139,19 @@ public:
         return SignedRange(newLower, newUpper);
     }
 
-    static SignedRange widen(SignedRange r1, SignedRange r2) {
-        // As we are on a finite lattice, when assuming that the range is int64_t,
-        //      instead of being agresive when widening, we may take the higest lower bound, a.k.a meet.
-        return SignedRange::meet(r1, r2); 
+    static SignedRange widen(SignedRange newRange, SignedRange oldRange, size_t sizeInBits) {
+        if (newRange.isEmpty()) return oldRange;
+        if (oldRange.isEmpty()) return newRange;
+
+        return SignedRange(newRange.lower < oldRange.lower ? min(sizeInBits) : oldRange.lower,
+                            newRange.upper > oldRange.upper ? max(sizeInBits) : oldRange.upper);
+    }
+
+    static SignedRange narrow(SignedRange newRange, SignedRange oldRange, size_t sizeInBits) {
+        if (newRange.isEmpty() || oldRange.isEmpty()) return SignedRange(true);
+
+        return SignedRange(oldRange.lower == min(sizeInBits) ? newRange.lower : oldRange.lower,
+                            oldRange.upper == max(sizeInBits) ? newRange.upper: oldRange.upper);
     }
 
     static SignedRange addRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits) {
@@ -288,10 +297,10 @@ protected:
 
             result[lhs] = resultRange;
         } else if (auto *PhiIns = dyn_cast<PHINode>(I)) {
-            SignedRange resultRange = SignedRange::full(lhs->getType()->getIntegerBitWidth());
+            SignedRange resultRange = getRangeFromValue(PhiIns->getIncomingValue(0), inVal);
 
-            for (size_t i = 0; i < PhiIns->getNumIncomingValues(); i++) {
-                SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i), inVal));
+            for (size_t i = 1; i < PhiIns->getNumIncomingValues(); i++) {
+                resultRange = SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i), inVal));
             }
 
             result[lhs] = resultRange;
@@ -310,15 +319,31 @@ protected:
         return result;
     }
 
-    LatticeValT narrow(LatticeValT outVal, LatticeValT) const { return outVal; }
+    LatticeValT narrow(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal) const { 
+        if (!I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return outVal;
+        
+        Value* lhs = I;
+        DenseMap<Value*, SignedRange> result = outVal;
+        
+        for (auto &entry : oldOutVal) {
+            if (result.contains(entry.first)) {
+                result[entry.first] = SignedRange::narrow(result[entry.first], entry.second, lhs->getType()->getIntegerBitWidth()); 
+            }
+        }   
 
-    LatticeValT widen(LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const { 
+        return result;   
+    }
+
+    LatticeValT widen(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const { 
+        if (!I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return outVal;
+        
+        Value* lhs = I;
         DenseMap<Value*, SignedRange> result = outVal;
         
         if (visits > widdeningTreshold) {            
             for (auto &entry : oldOutVal) {
                 if (result.contains(entry.first)) {
-                    result[entry.first] = SignedRange::widen(result[entry.first], entry.second); 
+                    result[entry.first] = SignedRange::widen(result[entry.first], entry.second, lhs->getType()->getIntegerBitWidth()); 
                 }
             }   
         }

@@ -19,8 +19,8 @@ private:
     LatticeValT boundary() const { return this->full(); }
     LatticeValT meet(const LatticeValT& lhs, const LatticeValT& rhs) const { return this->interserctionOp(lhs, rhs); } 
 
-    LatticeValT narrow(LatticeValT outVal, LatticeValT) const { return outVal; }
-    LatticeValT widen(LatticeValT outVal, LatticeValT, size_t) const { return outVal; }
+    LatticeValT narrow(Instruction*, LatticeValT outVal, LatticeValT) const { return outVal; }
+    LatticeValT widen(Instruction*, LatticeValT outVal, LatticeValT, size_t) const { return outVal; }
     LatticeValT getNodePathSensitiveOutput(Instruction*, Instruction*, LatticeValT parentOutput) { return parentOutput; }
 
     LatticeValT depGen(Instruction* I, LatticeValT& inVal) const; 
