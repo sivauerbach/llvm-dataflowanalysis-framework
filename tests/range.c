@@ -39,7 +39,15 @@ int test_phi(int a, int b) {
 }
 
 int test_widen(int a) {
-    while (a < 100) {
+    a=1;
+    while (a < 2147483646) {
+        a = a + 1;
+    }
+    return a;
+}
+
+int test_widen2(int a) {
+    while (a < 2147483646) {
         a = a + 1;
     }
     return a;

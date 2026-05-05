@@ -53,6 +53,7 @@ private:
     template <typename ... Args>
     void runPhase(PHASE phase, Args ... args);
 
+    NodeT prevNode;
 protected:
     using LatticeValT = LatticeValTemplate;
 
@@ -64,6 +65,8 @@ protected:
     
     template <typename ... Args>
     bool isEdgeNode(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().isExitNode(node, args ...); }
+
+    NodeT getPrevNode() const { return prevNode; }
 
 protected:
     LatticeValT& getNodeOutput(NodeT node) requires type_traits::isForword<PassType>::value { return out[node]; }
@@ -103,7 +106,7 @@ protected:
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput); }
  
 public:
-    DataflowAnalysis(): in(), out() { };
+    DataflowAnalysis(): in(), out(), prevNode() { };
 };    
 
 }

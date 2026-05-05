@@ -7,24 +7,34 @@ CXXFLAGS     = -rdynamic $(shell llvm-config --cxxflags) -fPIC -g -std=c++20 -I$
 LDFLAGS      = $(shell llvm-config --ldflags | tr '\n' ' ') -Wl,--exclude-libs,ALL
 BUILDDIR     = build
 DEPDIR       = $(BUILDDIR)/.deps
-DEPFLAGS 	 = -MT $@ -MMD -MP -MF $(DEPDIR)/$(patsubst $(BUILDDIR)/%.o,%.d,$@)
+DEPFLAGS     = -MMD -MP -MF $(DEPDIR)/$*.d -MT $@
+# DEPFLAGS 	 = -MT $@ -MMD -MP -MF $(DEPDIR)/$(patsubst $(BUILDDIR)/%.o,%.d,$@)
 
 TESTS             = dominators faint range
 OPTIMIZER_SOURCES = src/unifiedpass.cpp 
 
-FRAMEWORK_SOURCES = $(wildcard $(FRAMEWORKDIR)/*.cpp)
-ANALYSIS_SOURCES  = $(wildcard $(ANALYSISDIR)/*.cpp)
-PASSES_SOURCES	  = $(wildcard $(PASSESDIR)/*.cpp)
+FRAMEWORK_SOURCES := $(shell find $(FRAMEWORKDIR) -name '*.cpp' -type f)
+ANALYSIS_SOURCES  := $(shell find $(ANALYSISDIR)  -name '*.cpp' -type f)
+PASSES_SOURCES    := $(shell find $(PASSESDIR)    -name '*.cpp' -type f)
+OPTIMIZER_SOURCES := src/unifiedpass.cpp
+# FRAMEWORK_SOURCES = $(wildcard $(FRAMEWORKDIR)/**/*.cpp)
+# ANALYSIS_SOURCES  = $(wildcard $(ANALYSISDIR)/**/*.cpp)
+# PASSES_SOURCES	  = $(wildcard $(PASSESDIR)/**/*.cpp)
 
-FRAMEWORK_OBJS 	  = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(FRAMEWORK_SOURCES))
-ANALYSIS_OBJS     = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(ANALYSIS_SOURCES))
-PASSES_OBJS  	  = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(PASSES_SOURCES))
-OPTIMIZER_OBJS    = $(OPTIMIZER_SOURCES:%.cpp=$(BUILDDIR)/%.o)
+FRAMEWORK_OBJS := $(FRAMEWORK_SOURCES:%.cpp=$(BUILDDIR)/%.o)
+ANALYSIS_OBJS  := $(ANALYSIS_SOURCES:%.cpp=$(BUILDDIR)/%.o)
+PASSES_OBJS    := $(PASSES_SOURCES:%.cpp=$(BUILDDIR)/%.o)
+OPTIMIZER_OBJS := $(OPTIMIZER_SOURCES:%.cpp=$(BUILDDIR)/%.o)
+# FRAMEWORK_OBJS 	  = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(FRAMEWORK_SOURCES))
+# ANALYSIS_OBJS     = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(ANALYSIS_SOURCES))
+# PASSES_OBJS  	  = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(PASSES_SOURCES))
+# OPTIMIZER_OBJS    = $(OPTIMIZER_SOURCES:%.cpp=$(BUILDDIR)/%.o)
 
 OPTIMIZER_LIBS    = $(BUILDDIR)/unifiedpass.so
 TESTS_PRE         = $(TESTS:%=$(BUILDDIR)/tests/%-m2r.ll)
 OPT_OUT           = $(TESTS:%=$(BUILDDIR)/tests/%-opt.ll)
-DEPFILES 		  = $(patsubst %.cpp,$(DEPDIR)/%.d,$(FRAMEWORK_SOURCES) $(ANALYSIS_SOURCES) $(PASSES_SOURCES) $(OPTIMIZER_SOURCES))
+DEPFILES 		  := $(wildcard $(DEPDIR)/**/*.d)
+# DEPFILES 		  = $(patsubst %.cpp,$(DEPDIR)/%.d,$(FRAMEWORK_SOURCES) $(ANALYSIS_SOURCES) $(PASSES_SOURCES) $(OPTIMIZER_SOURCES))
 
 .PHONY: all clean tests
 .SECONDARY:
@@ -36,17 +46,22 @@ opt: $(OPT_OUT)
 clean:
 	rm -rf $(BUILDDIR)
 
-$(BUILDDIR)/$(FRAMEWORKDIR)/%.o: $(FRAMEWORKDIR)/%.cpp | $(DEPDIR)/$(FRAMEWORKDIR) $(BUILDDIR)/$(FRAMEWORKDIR)
+$(BUILDDIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@mkdir -p $(DEPDIR)/$(dir $*)
 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(BUILDDIR)/$(ANALYSISDIR)/%.o: $(ANALYSISDIR)/%.cpp | $(DEPDIR)/$(ANALYSISDIR) $(BUILDDIR)/$(ANALYSISDIR)
-	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
+# $(BUILDDIR)/$(FRAMEWORKDIR)/%.o: $(FRAMEWORKDIR)/%.cpp | $(DEPDIR)/$(FRAMEWORKDIR) $(BUILDDIR)/$(FRAMEWORKDIR)
+# 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(BUILDDIR)/$(PASSESDIR)/%.o: $(PASSESDIR)/%.cpp | $(DEPDIR)/$(PASSESDIR) $(BUILDDIR)/$(PASSESDIR)
-	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
+# $(BUILDDIR)/$(ANALYSISDIR)/%.o: $(ANALYSISDIR)/%.cpp | $(DEPDIR)/$(ANALYSISDIR) $(BUILDDIR)/$(ANALYSISDIR)
+# 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(BUILDDIR)/$(SOURCEDIR)/%.o: $(SOURCEDIR)/%.cpp | $(DEPDIR)/$(SOURCEDIR) $(BUILDDIR)/$(SOURCEDIR)
-	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
+# $(BUILDDIR)/$(PASSESDIR)/%.o: $(PASSESDIR)/%.cpp | $(DEPDIR)/$(PASSESDIR) $(BUILDDIR)/$(PASSESDIR)
+# 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+# $(BUILDDIR)/$(SOURCEDIR)/%.o: $(SOURCEDIR)/%.cpp | $(DEPDIR)/$(SOURCEDIR) $(BUILDDIR)/$(SOURCEDIR)
+# 	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(BUILDDIR)/unifiedpass.so: $(OPTIMIZER_OBJS) $(ANALYSIS_OBJS) $(PASSES_OBJS) $(FRAMEWORK_OBJS)
 	$(CXX) -shared -o $@ $(LDFLAGS) $(OPTIMIZER_OBJS) $(ANALYSIS_OBJS) $(PASSES_OBJS) $(FRAMEWORK_OBJS)
@@ -69,8 +84,12 @@ $(BUILDDIR)/tests/%-opt.bc: $(BUILDDIR)/tests/%-m2r.bc $(OPTIMIZER_LIBS) | $(BUI
 $(BUILDDIR)/tests/%-opt.ll: $(BUILDDIR)/tests/%-opt.bc
 	llvm-dis $< -o $@
 
+$(DEPDIR)/%:
+	@mkdir -p $@
+
 $(DEPDIR) $(DEPDIR)/$(SOURCEDIR) $(DEPDIR)/$(FRAMEWORKDIR) $(DEPDIR)/$(ANALYSISDIR) $(DEPDIR)/$(PASSESDIR) \
 $(BUILDDIR) $(BUILDDIR)/$(SOURCEDIR) $(BUILDDIR)/tests $(BUILDDIR)/$(FRAMEWORKDIR) $(BUILDDIR)/$(ANALYSISDIR) $(BUILDDIR)/$(PASSESDIR):
 	@mkdir -p $@
 
--include $(wildcard $(DEPFILES))
+DEPFILES := $(shell find $(DEPDIR) -name '*.d')
+	-include $(DEPFILES)
