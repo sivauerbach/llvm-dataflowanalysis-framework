@@ -68,40 +68,6 @@ FaintAnalysis::LatticeValT FaintAnalysis::constKill(Instruction* I) const {
     return constKill;
 };
 
-// FaintAnalysis::LatticeValT FaintAnalysis::transfer(Instruction* I, FaintAnalysis::LatticeValT inVal) const { 
-//     // f(IN) = Gen (IN) U (IN - ConstKill U DepKill(IN))
-//     LatticeValT kill, constKill, depKill, gen, outVal;
-
-//     // ConstKill: x is in constKill if instruction USES x
-//     if (I->getType()->isVoidTy()) {
-//         for (Use& U : I->operands()) {
-//             constKill.insert(U.get());
-//         }
-//     // DepKill:
-//     } else if (!inVal.contains(I)) {
-//         for (Use& U : I->operands()) {
-//             depKill.insert(U.get());
-//         }
-//     }
-
-//     kill = this->unionOp(depKill, constKill);
-    
-//     if (I->getType()->isVoidTy()) 
-//         gen.insert(I);
-//     else {
-//         bool selfOperand = false;
-//         for (Use& U : I->operands()) {
-//             if (U.get() == I) { selfOperand = true; break;}
-//         }
-//         if (!selfOperand)         
-//             gen.insert(I);
-//     }
-
-//     outVal = this->unionOp(this->subtractOp(inVal, kill), gen);
-//     return outVal;
-    
-// }
-
 bool FaintAnalysis::isFaint(Instruction* I) {
     if (I->getType()->isVoidTy() || isa<CallInst>(*I) || I->isTerminator())
         return false;

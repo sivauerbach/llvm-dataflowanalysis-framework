@@ -4,7 +4,6 @@
 #include <llvm/IR/Instructions.h>
 #include "llvm/IR/Constants.h"
 
-#include <llvm/Support/raw_ostream.h>
 
 SignedRange RangeAnalysis::getRangeFromValue(Value* value, LatticeValT& inVal) {
     if (auto *CI = dyn_cast<ConstantInt>(value)) {
@@ -38,8 +37,6 @@ RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT i
     // non-assignment instruction does not modify the range of any variable
     if (!I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return inVal;
 
-    I->print(outs()); outs() << "\n";
-
     Value* lhs = I;
     LatticeValT result = inVal;
 
@@ -56,9 +53,7 @@ RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT i
         else {
             switch (binOp->getOpcode()) {
                 case Instruction::Add: 
-                    outs() << "Adding into : %" << lhs->getName() << " with rhs1 " << static_cast<std::string>(rhs1) << " and rhs2 " << static_cast<std::string>(rhs2) << "\n";
                     resultRange = SignedRange::addRanges(rhs1, rhs2, binOp->hasNoSignedWrap(), lhs->getType()->getIntegerBitWidth());
-                    outs() << "\tResult: " << static_cast<std::string>(resultRange) << "\n";
                     break;
                 case Instruction::Sub: 
                     resultRange = SignedRange::subRanges(rhs1, rhs2, binOp->hasNoSignedWrap(), lhs->getType()->getIntegerBitWidth());
@@ -90,25 +85,7 @@ RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT i
             resultRange = SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i), inVal));
         }
 
-        result[lhs] = resultRange;
-
-        // if (auto *prevNode = getPrevNode()) {
-        //     Value* incomingValue = PhiIns->getIncomingValueForBlock(prevNode->getParent());
-        //     outs() << "Phi choose for : %" << lhs->getName() << " the range of " << incomingValue->getName() << "\n";
-        //     result[lhs] = getRangeFromValue(incomingValue, inVal);
-        //     outs() << "\tResult: " << static_cast<std::string>(result[lhs]) << "\n";
-        // } else {
-        //     // Best effort
-        //     SignedRange resultRange = getRangeFromValue(PhiIns->getIncomingValue(0), inVal);
-
-        //     for (size_t i = 1; i < PhiIns->getNumIncomingValues(); i++) {
-        //         resultRange = SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i), inVal));
-        //     }
-
-        //     result[lhs] = resultRange;
-        // }
-
-
+    result[lhs] = resultRange;
     } else if (ConstantInt *ConstInstraction = dyn_cast<ConstantInt>(lhs)) {
         result[lhs] = SignedRange(ConstInstraction->getSExtValue(), ConstInstraction->getSExtValue());
     } else if (auto *SignExtIns = dyn_cast<SExtInst>(I)) {
@@ -131,9 +108,7 @@ RangeAnalysis::LatticeValT RangeAnalysis::narrow(Instruction* I, LatticeValT out
     Value* lhs = I;
 
     if (oldOutVal.contains(lhs) && outVal.contains(lhs)) {
-        outs() << "Narrowing: %" << lhs->getName() << " with old value " << static_cast<std::string>(oldOutVal[lhs]) << " and new value " << static_cast<std::string>(outVal[lhs]) << "\n";
         result[lhs] = SignedRange::narrow(outVal[lhs], oldOutVal[lhs], lhs->getType()->getIntegerBitWidth());
-        outs() << "\tResult: " <<  static_cast<std::string>(result[lhs]) << "\n";
     }
 
     return result;   
@@ -146,9 +121,7 @@ RangeAnalysis::LatticeValT RangeAnalysis::widen(Instruction* I, LatticeValT outV
     Value* lhs = I;
 
     if (oldOutVal.contains(lhs) && outVal.contains(lhs)) {
-        outs() << "Widening: %" << lhs->getName() << " with old value " << static_cast<std::string>(oldOutVal[lhs]) << " and new value " << static_cast<std::string>(outVal[lhs]) << "\n";
         result[lhs] = SignedRange::widen(outVal[lhs], oldOutVal[lhs], lhs->getType()->getIntegerBitWidth());
-        outs() << "\tResult: " <<  static_cast<std::string>(result[lhs]) << "\n";
     }
 
     return result;   

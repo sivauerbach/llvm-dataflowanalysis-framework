@@ -38,17 +38,59 @@ int test_phi(int a, int b) {
     return c;
 }
 
+int test_mul(int a, int b) {
+    int c;
+    if (a > -3 && a < 10 && b > -5 && b < 15) {
+        c = a * b;
+        // expected range for c: [10, 23]
+    } else if (a > -17 && a < 5 && b > 0 && b < 5) {
+        c = a * b;
+        // expected range for c: [2, 8]
+    } else {
+        c = 20;
+        // expected range for c: [20, 20]
+    }
+    return c;
+}
+
+int test_div(int a, int b) {
+    int c;
+    if (a > -37 && a < 100 && b > -2 && b < 3) {
+        c = a / b;
+        // expected range for c: [10, 23]
+    } else if (a > -981 && a < 50505 && b > -1 && b < 5) {
+        c = a / b;
+        // expected range for c: [2, 8]
+    } else {
+        c = 20;
+        // expected range for c: [20, 20]
+    }
+    return c;
+}
+
 int test_widen(int a) {
     a=1;
-    while (a < 2147483646) {
-        a = a + 1;
+    while (a < 2147483646){ // a < 2^32-2
+        a = a + 1; // a= 2^32-3
     }
-    return a;
+    return a; // if a entered loop : 
+                // a= 2^32-1, else a=2^32
+                // reange(a) = (2^32-1, 2^32)
+}
+
+int test_widen_sub(int a) {
+    while (a > 0 ) { // a < 2^32-1
+        a = a - 1;
+    }
+    return a; // if a entered loop : 
+                // reange(a) = (-2^32+, 0)
 }
 
 int test_widen2(int a) {
     while (a < 2147483646) {
         a = a + 1;
     }
-    return a;
+    return a; // if a entered loop : 
+                // a= 2^32-1, else a=2^32
+                // reange(a) = (2^23-1, 2^23)
 }

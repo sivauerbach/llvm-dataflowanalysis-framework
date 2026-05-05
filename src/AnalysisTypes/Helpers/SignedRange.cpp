@@ -1,6 +1,9 @@
 #include "SignedRange.hpp"
 
+#include <array>
+
 #include "Utils/ArithmeticUtils.hpp"
+#include "AnalysisTypes/Helpers/OverflowableInt.hpp"
 
 int64_t SignedRange::min(size_t sizeInBits) {
     if (sizeInBits >= 64) 
@@ -118,6 +121,8 @@ SignedRange SignedRange::subRanges(SignedRange r1, SignedRange r2, bool noSigned
     return SignedRange(newLower, newUpper);
 }
 
+
+
 SignedRange SignedRange::mulRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits) {
     if (! noSignedWrap) {
         // For starters, we assume only NSW, NUW operations will be used, so we can just return the full range for the result.
@@ -125,58 +130,54 @@ SignedRange SignedRange::mulRanges(SignedRange r1, SignedRange r2, bool noSigned
         return SignedRange(min(sizeInBits), max(sizeInBits));
     }
 
-    int64_t newLower = 0, newUpper = 0;
-    //     lowerOther = (r1.lower >= 0) ? r2.lower : r2.upper, 
-    //     upperOther = (r1.upper >= 0) ? r2.upper : r2.lower
-    // if (r1.lower < 0) {
-    //     other = r2.upper;
-    // }
+    OverflowableInt upper1 = r1.upper, upper2 = r2.upper, lower1 = r1.lower, lower2 = r2.lower;
+    std::array<OverflowableInt, 4> vals{
+        upper1 * upper2,
+        upper1 * lower2,
+        lower1 * upper2,
+        lower1 * lower2
+    };
 
-    // if (! willMulOverflow(r1.lower, r2.lower)) {
-    //     if ()
+    auto lo = std::min_element(vals.begin(), vals.end());
+    auto hi = std::max_element(vals.begin(), vals.end());
 
-    //     if (r1.lower * r2.lower > max(sizeInBits)) {
-    //         return SignedRange(true);
-    //     } else {
-    //         newLower = std::max(r1.lower + r2.lower, min(sizeInBits));
-    //     }
-    // } else {
-    //     if (r1.lower < 0) {
-    //         newLower = min(sizeInBits);
-    //     } else {
-    //         return SignedRange(true);
-    //     }
-    // }           
-    
-    // if (!willAddOverflow(r1.upper, r2.upper)) {
-    //     if (r1.upper + r2.upper < min(sizeInBits)) {
-    //         return SignedRange(true);
-    //     } else {
-    //         newUpper = std::min(r1.upper + r2.upper, max(sizeInBits));
-    //     }
-    // } else {
-    //     if (r1.upper > 0) {
-    //         newUpper = max(sizeInBits);
-    //     } else {
-    //         return SignedRange(true);
-    //     }
-    // }
-
-    (void) r1, r2, noSignedWrap, sizeInBits;
-    return SignedRange(newLower, newUpper);  
+    if (lo->isPositiveInf() || hi->isNegativeInf()) return SignedRange(true);
+ 
+    return SignedRange(std::max(lo->getValue(), min(sizeInBits)), 
+                       std::min(hi->getValue(), max(sizeInBits)));  
 }
 
 SignedRange SignedRange::signDivRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits) {
     if (! noSignedWrap) {
         // For starters, we assume only NSW, NUW operations will be used, so we can just return the full range for the result.
     
-        return SignedRange(min(sizeInBits), max(sizeInBits));
+        // For now we'll just assume there isa nsw on division, as we are working over intergers, 
+        //        there should not be an overflow problem.
     }
 
-    int64_t newLower = 0, newUpper = 0;
+    OverflowableInt upper1 = r1.upper, upper2 = r2.upper, lower1 = r1.lower, lower2 = r2.lower;
+    if (0 == upper2) upper2 = -1;
+    if (0 == lower2) lower2 = 1;
+        
+    std::array<OverflowableInt, 8> vals{        
+        upper1 / upper2,
+        upper1 / lower2,
+        lower1 / upper2,
+        lower1 / lower2,
+        // The following are redundant is 0 not in [lower2, upper2]  
+        upper1 / ((lower2 < 0 && upper2 > 0) ? 1 : upper2),
+        upper1 / ((lower2 < 0 && upper2 > 0) ? -1 : lower2),
+        lower1 / ((lower2 < 0 && upper2 > 0) ? 1 : upper2),
+        lower1 / ((lower2 < 0 && upper2 > 0) ? -1 : lower2)
+    };
 
-    (void) r1, r2, noSignedWrap, sizeInBits;
-    return SignedRange(newLower, newUpper);
+    auto lo = std::min_element(vals.begin(), vals.end());
+    auto hi = std::max_element(vals.begin(), vals.end());
+
+    if (lo->isPositiveInf() || hi->isNegativeInf()) return SignedRange(true);
+
+    return SignedRange(std::max(lo->getValue(), min(sizeInBits)), 
+                        std::min(hi->getValue(), max(sizeInBits)));
 }
 
 SignedRange SignedRange::singedWrapCast(SignedRange range, size_t sizeInBits) {
@@ -216,13 +217,13 @@ std::string SignedRange::getRangeString() const {
     auto checkCloseToIntergerMax = [this, closeRange](int64_t lim, size_t power, std::string& old) -> void {
         if (lim < 0 && (lim <= this->min(power) + closeRange) && (lim >= this->min(power))) {
             
-            old = "Min(2^" + std::to_string(power) + ")";
+            old = "Min(" + std::to_string(power) + " bit)";
             
             if (this->min(power) != lim) {
                 old += " + " + std::to_string(lim - this->min(power));
             }
         } else if(lim > 0 && (lim >= this->max(power) - closeRange) && (lim <= this->max(power))) {
-            old = "Max(2^" + std::to_string(power) + ")";
+            old = "Max(" + std::to_string(power) + " bit)";
             
             if (this->max(power) != lim) {
                 old += " - " + std::to_string(this->max(power) - lim);

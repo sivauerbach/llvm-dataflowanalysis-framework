@@ -3,8 +3,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <llvm/Support/raw_ostream.h>
-
 using namespace llvm;
 
 namespace framework {
@@ -62,8 +60,6 @@ void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runP
         // visit node
         visits[node]++;
         
-        // outs() << "Visited: "; node->print(outs()); outs() << " with prev: "; if (prevNode) prevNode->print(outs()); else outs() << "null"; outs() << "\n";
-
         if (! isEdgeNode(node, args ...)) {
             // Meet over all predecessors
             LatticeValT newInput = derived().top(); // derived() returns instance casted to correct derived class
