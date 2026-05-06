@@ -39,6 +39,7 @@ extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
                    ArrayRef<PassBuilder::PipelineElement>) {
                     if (Name == "range") {
                         FPM.addPass(RangePass{});
+                        FPM.addPass(FaintPass{});
                         return true;
                     }                    
                     return false;

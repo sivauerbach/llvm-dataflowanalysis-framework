@@ -6,7 +6,13 @@
 
 
 // Use the Range Dataflow Analysis to Pass over CFG and Print
-struct RangePass : PassInfoMixin<RangePass> {
+struct RangePass : public PassInfoMixin<RangePass> {
+private:
+    void killEmptyRanges(RangeAnalysis& RA, Instruction& I);
+    void collapseSingletons(RangeAnalysis& RA, Instruction& I);
+    void killUnreachableBraches(RangeAnalysis& RA, Instruction& I);
+
+public:
     PreservedAnalyses run(Function& F, FunctionAnalysisManager& FAM);
     
     // Tell the pass manager we need LoopAnalysis

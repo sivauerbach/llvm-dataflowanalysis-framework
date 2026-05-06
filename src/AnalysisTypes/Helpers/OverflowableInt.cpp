@@ -1,7 +1,5 @@
 #include "OverflowableInt.hpp"
 
-#include<limits>
-
 #include "Utils/ArithmeticUtils.hpp"
 
 bool operator==(const OverflowableInt& lhs, const OverflowableInt& rhs) {

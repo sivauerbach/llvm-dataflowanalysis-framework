@@ -51,10 +51,12 @@ public:
         return !(*this == other);
     }
 
-    explicit operator std::string() const { return getRangeString(); }
-
     bool isEmpty() { return empty; }
+    bool isSingleton() { return (! isEmpty()) && (lower == upper); }
+    int64_t getLower() { return lower; }
+    int64_t getUpper() { return upper; }
 
+    explicit operator std::string() const { return getRangeString(); }
     std::string getRangeString() const;
 };
 

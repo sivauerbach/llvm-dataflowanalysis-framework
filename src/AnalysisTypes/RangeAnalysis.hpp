@@ -39,6 +39,7 @@ public:
     bool init(Function* F);
 
     LatticeValT getInstructionRanges(Instruction* I) { return out[I]; }
+    SignedRange getRange(Instruction* I, Value* V) { return out[I][V]; }
 };
 
 #endif // !RANGE_ANALYSIS_HPP
