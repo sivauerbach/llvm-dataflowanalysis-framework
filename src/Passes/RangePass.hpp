@@ -10,7 +10,7 @@ struct RangePass : public PassInfoMixin<RangePass> {
 private:
     void killEmptyRanges(RangeAnalysis& RA, Instruction& I);
     void collapseSingletons(RangeAnalysis& RA, Instruction& I);
-    void killUnreachableBraches(RangeAnalysis& RA, Instruction& I);
+    bool killUnreachableBraches(RangeAnalysis& RA, Instruction* I);
 
 public:
     PreservedAnalyses run(Function& F, FunctionAnalysisManager& FAM);

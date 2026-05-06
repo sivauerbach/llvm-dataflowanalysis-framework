@@ -9,7 +9,7 @@ PreservedAnalyses DominatorsPass::run(Function& F, FunctionAnalysisManager& FAM)
     DA.run(&F);
 
     
-    outs() << "=== Function: ";
+    outs() << "=== DominatorsPass - Function: ";
     F.printAsOperand(outs(), false);
     outs() << " ===\n";
 

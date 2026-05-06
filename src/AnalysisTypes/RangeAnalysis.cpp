@@ -2,8 +2,6 @@
 
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instructions.h>
-#include "llvm/IR/Constants.h"
-
 
 SignedRange RangeAnalysis::getRangeFromValue(Value* value, LatticeValT& inVal) {
     if (auto *CI = dyn_cast<ConstantInt>(value)) {
@@ -15,7 +13,7 @@ SignedRange RangeAnalysis::getRangeFromValue(Value* value, LatticeValT& inVal) {
         return inVal[value];
     }
 
-    return SignedRange();
+    return SignedRange(true);
 }
 
 RangeAnalysis::LatticeValT RangeAnalysis::meet(const LatticeValT& lhs, const LatticeValT& rhs) const {     
@@ -31,7 +29,6 @@ RangeAnalysis::LatticeValT RangeAnalysis::meet(const LatticeValT& lhs, const Lat
     }
     return result;    
 } 
-
 
 RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT inVal) const {
     // non-assignment instruction does not modify the range of any variable
@@ -85,7 +82,7 @@ RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT i
             resultRange = SignedRange::meet(resultRange, getRangeFromValue(PhiIns->getIncomingValue(i), inVal));
         }
 
-    result[lhs] = resultRange;
+        result[lhs] = resultRange;
     } else if (ConstantInt *ConstInstraction = dyn_cast<ConstantInt>(lhs)) {
         result[lhs] = SignedRange(ConstInstraction->getSExtValue(), ConstInstraction->getSExtValue());
     } else if (auto *SignExtIns = dyn_cast<SExtInst>(I)) {
@@ -114,8 +111,8 @@ RangeAnalysis::LatticeValT RangeAnalysis::narrow(Instruction* I, LatticeValT out
     return result;   
 }
 
-RangeAnalysis::LatticeValT RangeAnalysis::widen(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const { 
-    if (!I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return outVal;
+RangeAnalysis::LatticeValT RangeAnalysis::widen(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const {
+    if (visits <= widdeningTreshold || !I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return outVal;
 
     DenseMap<Value*, SignedRange> result = outVal;
     Value* lhs = I;

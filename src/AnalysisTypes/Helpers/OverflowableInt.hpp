@@ -22,6 +22,7 @@ public:
     friend bool operator<=(const OverflowableInt&, const OverflowableInt&);
     friend bool operator>(const OverflowableInt&, const OverflowableInt&);
     friend bool operator<(const OverflowableInt&, const OverflowableInt&);
+    
     friend OverflowableInt operator+(const OverflowableInt&, const OverflowableInt&);
     friend OverflowableInt operator-(const OverflowableInt&, const OverflowableInt&);
     friend OverflowableInt operator*(const OverflowableInt&, const OverflowableInt&);

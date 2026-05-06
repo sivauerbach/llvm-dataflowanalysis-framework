@@ -1,6 +1,8 @@
 #ifndef RANGE_ANALYSIS_HPP
 #define RANGE_ANALYSIS_HPP
 
+#include <llvm/IR/Constants.h>
+
 #include "Framework/InstructionAnalysis.hpp"
 #include "AnalysisTypes/Helpers/SignedRange.hpp"
 
@@ -30,7 +32,7 @@ protected:
     LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput);
 
 public:
-    explicit RangeAnalysis(size_t _widdeningTreshold = 6): 
+    explicit RangeAnalysis(size_t _widdeningTreshold = 10): 
         InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>(),
         widdeningTreshold(_widdeningTreshold),
         boundaryLatticeVal() 
@@ -39,7 +41,9 @@ public:
     bool init(Function* F);
 
     LatticeValT getInstructionRanges(Instruction* I) { return out[I]; }
-    SignedRange getRange(Instruction* I, Value* V) { return out[I][V]; }
+
+    bool hasValueRange(Instruction* I, Value* V) { return out[I].contains(V) || isa<ConstantInt>(V); }
+    SignedRange getRange(Instruction* I, Value* V) { return getRangeFromValue(V, out[I]); }
 };
 
 #endif // !RANGE_ANALYSIS_HPP

@@ -1,12 +1,20 @@
 #include "RangePass.hpp"
 
+#include <optional>
+
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Instructions.h>
+
+using namespace llvm;
 
 void killEmptyRanges(RangeAnalysis&, Instruction&) {
 }
 
 void RangePass::collapseSingletons(RangeAnalysis& RA, Instruction& I) {
+    if (! I.getType()->isIntegerTy() || isa<ConstantInt>(&I)) return;
+
     auto rangesMap = RA.getInstructionRanges(&I);
 
     for (unsigned i = 0; i < I.getNumOperands(); ++i) {
@@ -14,7 +22,7 @@ void RangePass::collapseSingletons(RangeAnalysis& RA, Instruction& I) {
         if (! value->getType()->isIntegerTy() || isa<ConstantInt>(value) 
                 || ! rangesMap.contains(value) || ! rangesMap[value].isSingleton()) continue;
 
-        outs() << "\tCollaping value of " << static_cast<std::string>(rangesMap[value]) << value->getName() << " from ";
+        outs() << "\t\tCollaping value of " << value->getName() << " from \"";
         I.print(outs());
 
         Constant *C = ConstantInt::get(
@@ -24,19 +32,99 @@ void RangePass::collapseSingletons(RangeAnalysis& RA, Instruction& I) {
 
         I.setOperand(i, C);
 
-        outs() << "\t to ";
+        outs() << "\" to \"";
         I.print(outs());
-        outs() << "\n";
+        outs() << "\"\n";
     }
 }
 
-void RangePass::killUnreachableBraches(RangeAnalysis& RA, Instruction& I) {
+bool RangePass::killUnreachableBraches(RangeAnalysis& RA, Instruction* I) {
+    if (! I) return false;
+
     // We only care about conditional branches
-    auto *br = dyn_cast<BranchInst>(parent);
-    if (! br || !br->isConditional()) return;
+    auto *br = dyn_cast<BranchInst>(I);
+    if (! br || !br->isConditional()) return false;
 
     auto *icmp = dyn_cast<ICmpInst>(br->getCondition());
-    if (! icmp) return;
+    if (! icmp) return false;
+
+    Value *lhsValue = icmp->getOperand(0), *rhsValue = icmp->getOperand(1);
+
+    if (! RA.hasValueRange(I, lhsValue) || ! RA.hasValueRange(I, rhsValue)) return false;
+
+    auto lhsRange = RA.getRange(I, lhsValue), rhsRange = RA.getRange(I, rhsValue);
+
+    outs() << "Range of " << lhsValue->getName() << " is " << static_cast<std::string>(lhsRange) << "\n";
+    std::optional<uint8_t> branch = std::nullopt;
+    switch (icmp->getPredicate()) {
+        case ICmpInst::ICMP_SGT:
+            if (lhsRange > rhsRange) {
+                branch = 0;
+            } else if (lhsRange <= rhsRange) {
+                branch = 1;
+            }
+
+            break;
+
+        case ICmpInst::ICMP_SGE:
+            if (lhsRange >= rhsRange) {
+                branch = 0;
+            } else if (lhsRange < rhsRange) {
+                branch = 1;
+            }
+            break;
+
+        case ICmpInst::ICMP_SLT:
+            if (lhsRange < rhsRange) {
+                branch = 0;
+            } else if (lhsRange >= rhsRange) {
+                branch = 1;
+            }
+            break;
+
+        case ICmpInst::ICMP_SLE:
+            if (lhsRange <= rhsRange) {
+                branch = 0;
+            } else if (lhsRange > rhsRange) {
+                branch = 1;
+            }
+            break;
+
+        case ICmpInst::ICMP_EQ:
+            if (lhsRange.isSingleton() && lhsRange == rhsRange) {
+                branch = 0;
+            } else if (lhsRange < rhsRange || lhsRange > rhsRange) {
+                branch = 1;
+            }
+            break;
+
+        case ICmpInst::ICMP_NE:
+            if (lhsRange < rhsRange || lhsRange > rhsRange) {
+                branch = 0;
+            } else if (lhsRange.isSingleton() && lhsRange == rhsRange) {
+                branch = 1;
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    if (! branch) return false;
+
+    outs() << "\t\tKilling unreachable branch from \"";
+    I->print(outs());
+    outs() << "\" with ranges: lhs - " << lhsValue->getName()  << ": " << static_cast<std::string>(lhsRange) << ", rhs - " << lhsValue->getName()  << ": " << static_cast<std::string>(lhsRange);
+
+    BasicBlock *Dest = br->getSuccessor(*branch);
+    auto newInst = BranchInst::Create(Dest, br->getIterator());
+    br->eraseFromParent();
+
+    outs() << "\" to \"";
+    newInst->print(outs());
+    outs() << "\"\n";
+
+    return true;
 }
 
 PreservedAnalyses RangePass::run(Function& F, FunctionAnalysisManager& FAM) {
@@ -45,20 +133,27 @@ PreservedAnalyses RangePass::run(Function& F, FunctionAnalysisManager& FAM) {
     RA.init(&F);
     RA.run(&F);
 
-    outs() << "==== Function: ";
+    outs() << "==== RangePass - Function: ";
     F.printAsOperand(outs(), false);
     outs() << " ====\n";
 
-    
-
     for (BasicBlock& B : F) {
-        outs() << "\tBlock: " << B.getName() << "\n";
+        outs() << "\tCollapsing singletons in block: " << B.getName() << "\n";
         for (Instruction& I: B) {
             collapseSingletons(RA, I);
         }
+        outs() << "\n";
     }
 
-    outs() << "\n";
+    for (BasicBlock& B : F) {
+        outs() << "\tKilling unreachable branches in block: " << B.getName() << "\n";
+        for (Instruction& I: B) {
+            if (killUnreachableBraches(RA, &I)) break;
+        }
+        outs() << "\n";
+    }
+    
+
 
     // for (BasicBlock& B : F) {
     //     std::vector<Instruction *> toErase;

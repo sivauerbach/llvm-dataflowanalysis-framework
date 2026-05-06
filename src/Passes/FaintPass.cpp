@@ -9,7 +9,7 @@ PreservedAnalyses FaintPass::run(Function& F, FunctionAnalysisManager& FAM) {
     FA.init(&F);
     FA.run(&F);
 
-    outs() << "==== Function: ";
+    outs() << "==== FaintPass - Function: ";
     F.printAsOperand(outs(), false);
     outs() << " ====\n";
 

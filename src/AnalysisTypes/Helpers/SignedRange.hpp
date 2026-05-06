@@ -43,18 +43,18 @@ public:
     SignedRange& operator=(const SignedRange& other);
     SignedRange& operator=(SignedRange&& other) noexcept;
 
-    bool operator==(const SignedRange& other) const {
-        return empty == other.empty && lower == other.lower && upper == other.upper;
-    }
+    // Note SignedRange is a poset, that is we might have x not bigger of smaller then y and x different then y.
+    friend bool operator==(const SignedRange&, const SignedRange&);
+    friend bool operator!=(const SignedRange&, const SignedRange&);
+    friend bool operator>=(const SignedRange&, const SignedRange&);
+    friend bool operator<=(const SignedRange&, const SignedRange&);
+    friend bool operator>(const SignedRange&, const SignedRange&);
+    friend bool operator<(const SignedRange&, const SignedRange&);
 
-    bool operator!=(const SignedRange& other) const {
-        return !(*this == other);
-    }
-
-    bool isEmpty() { return empty; }
-    bool isSingleton() { return (! isEmpty()) && (lower == upper); }
-    int64_t getLower() { return lower; }
-    int64_t getUpper() { return upper; }
+    bool isEmpty() const { return empty; }
+    bool isSingleton() const { return (! isEmpty()) && (lower == upper); }
+    int64_t getLower() const { return lower; }
+    int64_t getUpper() const { return upper; }
 
     explicit operator std::string() const { return getRangeString(); }
     std::string getRangeString() const;

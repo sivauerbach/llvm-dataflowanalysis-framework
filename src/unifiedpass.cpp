@@ -5,6 +5,11 @@
 #include "Passes/FaintPass.hpp"
 #include "Passes/RangePass.hpp"
 
+
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/DCE.h"
+#include "llvm/Transforms/Scalar/ADCE.h"
+
 using namespace llvm;
 
 // ============================================================
@@ -39,7 +44,20 @@ extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
                    ArrayRef<PassBuilder::PipelineElement>) {
                     if (Name == "range") {
                         FPM.addPass(RangePass{});
+
+                        //  Cleanup passes
+                        FPM.addPass(FaintPass{}); // REPORT
+                        FPM.addPass(llvm::SimplifyCFGPass());
+                        return true;
+                    }                    
+                    return false;
+                });
+            PB.registerPipelineParsingCallback(
+                [](StringRef Name, FunctionPassManager& FPM,
+                   ArrayRef<PassBuilder::PipelineElement>) {
+                    if (Name == "rangeless") {
                         FPM.addPass(FaintPass{});
+                        FPM.addPass(llvm::SimplifyCFGPass());
                         return true;
                     }                    
                     return false;

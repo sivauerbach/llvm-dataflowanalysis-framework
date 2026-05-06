@@ -208,6 +208,38 @@ SignedRange& SignedRange::operator=(SignedRange&& other) noexcept {
     return *this;
 }
 
+bool operator==(const SignedRange& lhs, const SignedRange& rhs) {
+    return lhs.empty == rhs.empty && lhs.lower == rhs.lower && lhs.upper == rhs.upper;
+}
+
+bool operator!=(const SignedRange& lhs, const SignedRange& rhs) {
+    return !(lhs == rhs);
+}
+
+bool operator>(const SignedRange& lhs, const SignedRange& rhs) {
+    if (rhs.isEmpty() || lhs.isEmpty()) return false;
+    
+    return lhs.lower > rhs.upper;
+}
+
+bool operator<(const SignedRange& lhs, const SignedRange& rhs) {
+    if (rhs.isEmpty() || lhs.isEmpty()) return false;
+    
+    return lhs.upper < rhs.lower;
+}
+
+bool operator>=(const SignedRange& lhs, const SignedRange& rhs) {
+    if (rhs.isEmpty() || lhs.isEmpty()) return false;
+    
+    return lhs.lower >= rhs.upper;
+}
+
+bool operator<=(const SignedRange& lhs, const SignedRange& rhs) {
+    if (rhs.isEmpty() || lhs.isEmpty()) return false;
+    
+    return lhs.upper <= rhs.lower;
+}
+
 std::string SignedRange::getRangeString() const {
     if (empty) return "empty";
 
