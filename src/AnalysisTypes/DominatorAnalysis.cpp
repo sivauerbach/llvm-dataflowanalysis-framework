@@ -1,7 +1,5 @@
 #include "DominatorAnalysis.hpp"
 
-// static DominatorAnalysis::LatticeValT DominatorAnalysis::getUniverse(Function& function) 
-
 DominatorAnalysis::LatticeValT DominatorAnalysis::transfer(BasicBlock* B, DominatorAnalysis::LatticeValT inVal) const { 
     inVal.insert(B);
     return inVal;

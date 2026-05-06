@@ -23,7 +23,7 @@ protected:
     LatticeValT widen(BasicBlock*, LatticeValT outVal, LatticeValT, size_t) const { return outVal; }
     LatticeValT getNodePathSensitiveOutput(BasicBlock*, BasicBlock*, LatticeValT parentOutput) { return parentOutput; }
 
-    LatticeValT getUniverse(Function* function) { 
+    LatticeValT getDomain(Function* function) { 
         LatticeValT S;
         
         for (BasicBlock& B : *function) 

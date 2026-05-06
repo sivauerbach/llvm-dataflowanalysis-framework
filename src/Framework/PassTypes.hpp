@@ -10,16 +10,19 @@ enum class PASS_TYPE {
     BACKWARDS = 1
 };
 
+
 namespace type_traits {
 
 template <PASS_TYPE PassType>
-struct isForword : std::false_type { };
+struct isForward : std::false_type { };
 
 template <PASS_TYPE PassType>
 struct isBackwards : std::false_type { };
 
+// Specialization
+
 template <>
-struct isForword<PASS_TYPE::FORWARDS> : std::true_type { };
+struct isForward<PASS_TYPE::FORWARDS> : std::true_type { };
 
 template <>
 struct isBackwards<PASS_TYPE::BACKWARDS> : std::true_type { };

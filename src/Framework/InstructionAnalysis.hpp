@@ -24,8 +24,7 @@ private:
     bool isLastInstruction(Instruction* I) { return &(I->getParent()->back()) == I; }
     bool isFirstInstruction(Instruction* I) { return &(I->getParent()->front()) == I; }
 
-protected: //implementing from DataflowAnalysis
-
+protected: //Implementing from DataflowAnalysis
     std::vector<Instruction*> getNodePredecessors(Instruction* I, Function*);
     std::vector<Instruction*> getNodeSuccessors(Instruction* I, Function*);
 

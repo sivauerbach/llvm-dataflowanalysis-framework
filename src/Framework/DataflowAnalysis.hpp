@@ -39,40 +39,37 @@ private:
     void initializeBlocks(Args ... args);
 
     template <typename ... Args>
-    auto getNodePrev(NodeT node, Args ... args) requires type_traits::isForword<PassType>::value { return derived().getNodePredecessors(node, args ...); }
+    auto getNodePrev(NodeT node, Args ... args) requires type_traits::isForward<PassType>::value { return derived().getNodePredecessors(node, args ...); }
     
     template <typename ... Args>
     auto getNodePrev(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().getNodeSuccessors(node, args ...); }
 
     template <typename ... Args>
-    auto getNodeNext(NodeT node, Args ... args) requires type_traits::isForword<PassType>::value { return derived().getNodeSuccessors(node, args ...); }
+    auto getNodeNext(NodeT node, Args ... args) requires type_traits::isForward<PassType>::value { return derived().getNodeSuccessors(node, args ...); }
     
     template <typename ... Args>
     auto getNodeNext(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().getNodePredecessors(node, args ...); }
 
     template <typename ... Args>
-    void runPhase(PHASE phase, Args ... args);
-
-    NodeT prevNode;
-protected:
-    using LatticeValT = LatticeValTemplate;
-
-    DenseMap<NodeT, LatticeValT> in;
-    DenseMap<NodeT , LatticeValT> out;
-
-    template <typename ... Args>
-    bool isEdgeNode(NodeT node, Args ... args) requires type_traits::isForword<PassType>::value { return derived().isEntryNode(node, args ...); }
+    bool isEdgeNode(NodeT node, Args ... args) requires type_traits::isForward<PassType>::value { return derived().isEntryNode(node, args ...); }
     
     template <typename ... Args>
     bool isEdgeNode(NodeT node, Args ... args) requires type_traits::isBackwards<PassType>::value { return derived().isExitNode(node, args ...); }
 
-    NodeT getPrevNode() const { return prevNode; }
+protected:
+    using LatticeValT = LatticeValTemplate;
+
+    DenseMap<NodeT, LatticeValT> in;
+    DenseMap<NodeT, LatticeValT> out;
+
+    template <typename ... Args>
+    void runPhase(PHASE phase, Args ... args);
 
 protected:
-    LatticeValT& getNodeOutput(NodeT node) requires type_traits::isForword<PassType>::value { return out[node]; }
+    LatticeValT& getNodeOutput(NodeT node) requires type_traits::isForward<PassType>::value { return out[node]; }
     LatticeValT& getNodeOutput(NodeT node) requires type_traits::isBackwards<PassType>::value { return in[node]; }
 
-    LatticeValT& getNodeInput(NodeT node) requires type_traits::isForword<PassType>::value { return in[node]; }
+    LatticeValT& getNodeInput(NodeT node) requires type_traits::isForward<PassType>::value { return in[node]; }
     LatticeValT& getNodeInput(NodeT node) requires type_traits::isBackwards<PassType>::value { return out[node]; }
 
     template <typename ... Args>
@@ -106,7 +103,7 @@ protected:
         { return derived().getNodePathSensitiveOutput(node, parent, parentOutput); }
  
 public:
-    DataflowAnalysis(): in(), out(), prevNode() { };
+    DataflowAnalysis(): in(), out() { };
 };    
 
 }

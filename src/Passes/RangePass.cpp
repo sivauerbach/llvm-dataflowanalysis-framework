@@ -13,8 +13,6 @@ void killEmptyRanges(RangeAnalysis&, Instruction&) {
 }
 
 void RangePass::collapseSingletons(RangeAnalysis& RA, Instruction& I) {
-    if (! I.getType()->isIntegerTy() || isa<ConstantInt>(&I)) return;
-
     auto rangesMap = RA.getInstructionRanges(&I);
 
     for (unsigned i = 0; i < I.getNumOperands(); ++i) {

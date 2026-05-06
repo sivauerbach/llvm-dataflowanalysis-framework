@@ -40,7 +40,7 @@ protected:
     LatticeValT constKill(NodeT node, Args ... args) const { return derived().constKill(node, args ...); };
 
     template <typename ... Args>
-    LatticeValT getUniverse(Args ... args) { return derived().getUniverse(args ...); } 
+    LatticeValT getDomain(Args ... args) { return derived().getDomain(args ...); } 
 };
 
 }

@@ -3,23 +3,23 @@
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/IR/Instructions.h>
 
-FaintAnalysis::LatticeValT FaintAnalysis::getUniverse(Function* function) {
-    LatticeValT universe;
+FaintAnalysis::LatticeValT FaintAnalysis::getDomain(Function* function) {
+    LatticeValT domain;
 
     for (auto& BB : *function) {
         for (auto& I : BB) {
             
-            universe.insert(&I);
+            domain.insert(&I);
 
             for (Use& U : I.operands()) {
                 Value* V = U.get();
                 if (!V || V->getType()->isVoidTy()) continue;
                 if (isa<Instruction>(V) || isa<Argument>(V))
-                    universe.insert(V);
+                    domain.insert(V);
             }
         }
     }
-    return universe;
+    return domain;
 }
 
 FaintAnalysis::LatticeValT FaintAnalysis::depGen(Instruction* I, FaintAnalysis::LatticeValT& inVal) const { 

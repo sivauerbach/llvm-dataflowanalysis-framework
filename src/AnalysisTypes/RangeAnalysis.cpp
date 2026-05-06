@@ -98,31 +98,35 @@ RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT i
     return result;
 }
 
-RangeAnalysis::LatticeValT RangeAnalysis::narrow(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal) const { 
-    if (!I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return outVal;
+RangeAnalysis::LatticeValT RangeAnalysis::narrow(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal) const {
+    if (! I) return outVal;
     
     DenseMap<Value*, SignedRange> result = outVal;
-    Value* lhs = I;
+    
+    for (auto &entry : oldOutVal) {
+        if (result.contains(entry.first)) {
+            result[entry.first] = SignedRange::narrow(result[entry.first], entry.second, entry.first->getType()->getIntegerBitWidth());
+    
+        }
+    }   
 
-    if (oldOutVal.contains(lhs) && outVal.contains(lhs)) {
-        result[lhs] = SignedRange::narrow(outVal[lhs], oldOutVal[lhs], lhs->getType()->getIntegerBitWidth());
-    }
-
-    return result;   
+    return result;
 }
 
 RangeAnalysis::LatticeValT RangeAnalysis::widen(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal, size_t visits) const {
-    if (visits <= widdeningTreshold || !I || I->getType()->isVoidTy() || !I->getType()->isIntegerTy()) return outVal;
-
+    if (visits <= widdeningTreshold || ! I) return outVal;
+    
     DenseMap<Value*, SignedRange> result = outVal;
-    Value* lhs = I;
+    
+    for (auto &entry : oldOutVal) {
+        if (result.contains(entry.first)) {
+            result[entry.first] = SignedRange::widen(result[entry.first], entry.second, entry.first->getType()->getIntegerBitWidth());
+        }
+    }   
 
-    if (oldOutVal.contains(lhs) && outVal.contains(lhs)) {
-        result[lhs] = SignedRange::widen(outVal[lhs], oldOutVal[lhs], lhs->getType()->getIntegerBitWidth());
-    }
-
-    return result;   
+    return result;
 }
+
 
 RangeAnalysis::LatticeValT RangeAnalysis::getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput) {
     // Start with parent's output

@@ -27,7 +27,6 @@ public:
     static SignedRange mulRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits);
     static SignedRange signDivRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits);
 
-    // Maybe need for no nsw case.
     static SignedRange singedWrapCast(SignedRange range, size_t sizeInBits);
 
 public:
@@ -43,9 +42,10 @@ public:
     SignedRange& operator=(const SignedRange& other);
     SignedRange& operator=(SignedRange&& other) noexcept;
 
-    // Note SignedRange is a poset, that is we might have x not bigger of smaller then y and x different then y.
     friend bool operator==(const SignedRange&, const SignedRange&);
     friend bool operator!=(const SignedRange&, const SignedRange&);
+
+    // Note SignedRange is a poset, that is we might have x not bigger of smaller then y and x different then y.
     friend bool operator>=(const SignedRange&, const SignedRange&);
     friend bool operator<=(const SignedRange&, const SignedRange&);
     friend bool operator>(const SignedRange&, const SignedRange&);

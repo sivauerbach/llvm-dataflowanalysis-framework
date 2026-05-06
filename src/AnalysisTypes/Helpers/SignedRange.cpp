@@ -1,9 +1,11 @@
 #include "SignedRange.hpp"
 
+#include <limits>
 #include <array>
 
 #include "Utils/ArithmeticUtils.hpp"
 #include "AnalysisTypes/Helpers/OverflowableInt.hpp"
+
 
 int64_t SignedRange::min(size_t sizeInBits) {
     if (sizeInBits >= 64) 
@@ -52,7 +54,7 @@ SignedRange SignedRange::addRanges(SignedRange r1, SignedRange r2, bool noSigned
         return SignedRange(min(sizeInBits), max(sizeInBits));
     }
 
-    if (!willAddOverflow(r1.lower, r2.lower)) {
+    if (! willAddOverflow(r1.lower, r2.lower)) {
         if (r1.lower + r2.lower > max(sizeInBits)) {
             return SignedRange(true);
         } else {
@@ -66,7 +68,7 @@ SignedRange SignedRange::addRanges(SignedRange r1, SignedRange r2, bool noSigned
         }
     }           
     
-    if (!willAddOverflow(r1.upper, r2.upper)) {
+    if (! willAddOverflow(r1.upper, r2.upper)) {
         if (r1.upper + r2.upper < min(sizeInBits)) {
             return SignedRange(true);
         } else {
@@ -84,17 +86,20 @@ SignedRange SignedRange::addRanges(SignedRange r1, SignedRange r2, bool noSigned
 }
 
 SignedRange SignedRange::subRanges(SignedRange r1, SignedRange r2, bool noSignedWrap, size_t sizeInBits) {
-    if (! noSignedWrap) {
-        // For starters, we assume only NSW, NUW operations will be used, so we can just return the full range for the result.
     
+    // For starters, we assume only NSW, NUW operations will be used, so we can just return the full range for the result.
+    if (! noSignedWrap) {    
         return SignedRange(min(sizeInBits), max(sizeInBits));
     }
     
+    // Easy case
     if (min(64) != r2.lower) {
         // Here we wont overflow on -r2.lower 
         return SignedRange::addRanges(r1, SignedRange(-r2.upper, -r2.lower), noSignedWrap, sizeInBits);
     }
 
+    // Hard case: signed range is asymmetrical:(-2^k, 2^k-1). 
+    // Therefore must handle case where -r2=-(-2^k) will overflow positive edge
     int64_t newLower = 0, newUpper = 0;
     // As r2.lower == min(64), the only case when willSubOverflow is when r1.upper is non-negative, then
     //  the upperbound must be bigger then -min(64)>max(64).

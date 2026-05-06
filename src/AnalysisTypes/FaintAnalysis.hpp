@@ -28,7 +28,7 @@ private:
     LatticeValT depKill(Instruction* I, LatticeValT& inVal) const;
     LatticeValT constKill(Instruction* I) const;
     
-    LatticeValT getUniverse(Function* function);
+    LatticeValT getDomain(Function* function);
 
     LatticeValT transfer(Instruction* I, LatticeValT& inVal) const { 
         return this->killGenTransfer(I, inVal);

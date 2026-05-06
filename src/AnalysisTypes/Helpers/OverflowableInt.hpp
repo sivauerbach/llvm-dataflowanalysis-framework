@@ -9,8 +9,9 @@ enum class OVERFLOW {
     NONE,
     OVER,
     UNDER,
-    UNDEFIEND
+    UNDEFINED
 };
+
 class OverflowableInt {
     int64_t value;
     OVERFLOW overflowType;
@@ -37,7 +38,7 @@ public:
 
     bool isNegativeInf() { return OVERFLOW::UNDER == overflowType; }
     bool isPositiveInf() { return OVERFLOW::OVER == overflowType; }
-    bool isWellDefined() { return OVERFLOW::UNDEFIEND != overflowType; }
+    bool isWellDefined() { return OVERFLOW::UNDEFINED != overflowType; }
 
     auto getValue() { 
         if (OVERFLOW::UNDER == overflowType) return std::numeric_limits<decltype(value)>::min();
@@ -49,7 +50,7 @@ public:
         switch (overflowType) {
             case OVERFLOW::UNDER: return "-inf";
             case OVERFLOW::OVER: return "inf";
-            case OVERFLOW::UNDEFIEND: return "UNDEFIEND";
+            case OVERFLOW::UNDEFINED: return "UNDEFINED";
             case OVERFLOW::NONE: return std::to_string(value);
         }
     }

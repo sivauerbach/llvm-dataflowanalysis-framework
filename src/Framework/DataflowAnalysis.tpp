@@ -39,24 +39,23 @@ void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runI
 template <typename Derived, typename NodeT, typename LatticeValT, PASS_TYPE PassType, typename IteratorType>
 template <typename ... Args>
 void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runPhase(PHASE phase, Args ... args) {
-    std::vector<std::pair<NodeT, NodeT>> worklist;
+    std::vector<NodeT> worklist;
 
     for (NodeT node: derived().getIter(args ...)) {
         if (isEdgeNode(node, args ...)) {
-            worklist.push_back(std::make_pair(node, NodeT{ }));
+            worklist.push_back(node);
         }
     }
 
     DenseMap<NodeT, size_t> visits;
 
     while (! worklist.empty()) {
+        bool thisNodeChanged = false;
+        
         // pop the front node
-        bool changed = false;
-        std::pair<NodeT, NodeT> entry = worklist.front();
-        NodeT node = entry.first;
-        prevNode = entry.second;
-
+        NodeT node = worklist.front();
         worklist.erase(worklist.begin());
+        
         // visit node
         visits[node]++;
         
@@ -84,13 +83,14 @@ void DataflowAnalysis<Derived, NodeT, LatticeValT, PassType, IteratorType>::runP
                 derived().getNodeInput(node)  = newInput;
                 derived().getNodeOutput(node) = newOutput;
                 
-                changed = true;
+                thisNodeChanged = true;
             }
         }
-
-        if (1 == visits[node] || changed) {
+        
+        // visit successors if node changed or this is its first visit
+        if (1 == visits[node] || thisNodeChanged) {
             for (NodeT succ : derived().getNodeNext(node, args ...)) { // REPORT
-                worklist.push_back(std::make_pair(succ, node));
+                worklist.push_back(succ);
             }
         }
     }

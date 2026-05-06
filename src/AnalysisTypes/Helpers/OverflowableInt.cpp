@@ -50,8 +50,8 @@ bool operator>=(const OverflowableInt& lhs, const OverflowableInt& rhs) {
 }
 
 OverflowableInt operator+(const OverflowableInt& lhs, const OverflowableInt& rhs) {
-    if (lhs.overflowType == OVERFLOW::UNDEFIEND || rhs.overflowType == OVERFLOW::UNDEFIEND) {
-        return OVERFLOW::UNDEFIEND;
+    if (lhs.overflowType == OVERFLOW::UNDEFINED || rhs.overflowType == OVERFLOW::UNDEFINED) {
+        return OVERFLOW::UNDEFINED;
     }
 
     // Propagate infinities
@@ -67,7 +67,7 @@ OverflowableInt operator+(const OverflowableInt& lhs, const OverflowableInt& rhs
     //      NONE, NONE
     //      UNDER, OVER => UDEF
     if (lhs.overflowType != OVERFLOW::NONE && rhs.overflowType != OVERFLOW::NONE)
-        return OVERFLOW::UNDEFIEND;
+        return OVERFLOW::UNDEFINED;
 
     if (willAddOverflow(lhs.value, rhs.value)) {
         return (lhs.value >= 0) ? OVERFLOW::OVER : OVERFLOW::UNDER;
@@ -94,8 +94,8 @@ OverflowableInt operator-(const OverflowableInt& lhs, const OverflowableInt& rhs
         case OVERFLOW::UNDER:
             return OVERFLOW::UNDER;
 
-        case OVERFLOW::UNDEFIEND:
-            return OVERFLOW::UNDEFIEND;
+        case OVERFLOW::UNDEFINED:
+            return OVERFLOW::UNDEFINED;
 
         case OVERFLOW::NONE:
             if (0 >= lhs.value) return OVERFLOW::UNDER;
@@ -109,8 +109,8 @@ OverflowableInt operator*(const OverflowableInt& lhs, const OverflowableInt& rhs
             (rhs.overflowType == OVERFLOW::NONE && rhs.value == 0))
         return 0;
 
-    if (lhs.overflowType == OVERFLOW::UNDEFIEND || rhs.overflowType == OVERFLOW::UNDEFIEND) {
-        return OVERFLOW::UNDEFIEND;
+    if (lhs.overflowType == OVERFLOW::UNDEFINED || rhs.overflowType == OVERFLOW::UNDEFINED) {
+        return OVERFLOW::UNDEFINED;
     }
 
     // Handle infinities
@@ -141,13 +141,13 @@ OverflowableInt operator*(const OverflowableInt& lhs, const OverflowableInt& rhs
 }
 
 OverflowableInt operator/(const OverflowableInt& lhs, const OverflowableInt& rhs) {
-    if (lhs.overflowType == OVERFLOW::UNDEFIEND || rhs.overflowType == OVERFLOW::UNDEFIEND) {
-        return OVERFLOW::UNDEFIEND;
+    if (lhs.overflowType == OVERFLOW::UNDEFINED || rhs.overflowType == OVERFLOW::UNDEFINED) {
+        return OVERFLOW::UNDEFINED;
     }
     
     // Division by zero
     if (rhs.overflowType == OVERFLOW::NONE && rhs.value == 0) {
-        return OVERFLOW::UNDEFIEND;
+        return OVERFLOW::UNDEFINED;
     }
 
     // Finite / infinity = 0
@@ -167,7 +167,7 @@ OverflowableInt operator/(const OverflowableInt& lhs, const OverflowableInt& rhs
     // Infinity / infinity -> undefined
     if (lhs.overflowType != OVERFLOW::NONE &&
         rhs.overflowType != OVERFLOW::NONE) {
-            return OVERFLOW::UNDEFIEND;
+            return OVERFLOW::UNDEFINED;
     }
 
     if (willAddOverflow(lhs.value, rhs.value)) {
