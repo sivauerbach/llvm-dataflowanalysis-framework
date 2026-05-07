@@ -32,7 +32,7 @@ protected:
     LatticeValT getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput);
 
 public:
-    explicit RangeAnalysis(size_t _widdeningTreshold = 10): 
+    explicit RangeAnalysis(size_t _widdeningTreshold = 5): 
         InstructionAnalysis<RangeAnalysis, DenseMap<Value*, SignedRange>, PASS_TYPE::FORWARDS>(),
         widdeningTreshold(_widdeningTreshold),
         boundaryLatticeVal() 

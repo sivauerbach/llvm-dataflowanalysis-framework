@@ -98,16 +98,19 @@ RangeAnalysis::LatticeValT RangeAnalysis::transfer(Instruction* I, LatticeValT i
     return result;
 }
 
+
+#include <llvm/Support/raw_ostream.h>
 RangeAnalysis::LatticeValT RangeAnalysis::narrow(Instruction* I, LatticeValT outVal, LatticeValT oldOutVal) const {
     if (! I) return outVal;
     
     DenseMap<Value*, SignedRange> result = outVal;
     
+    I->print(outs()); outs() << "\n";
     for (auto &entry : oldOutVal) {
         if (result.contains(entry.first)) {
+            outs() << "Narrowing: %" << entry.first->getName() << " with old value " << static_cast<std::string>(oldOutVal[entry.first]) << " and new value " << static_cast<std::string>(outVal[entry.first]) << "\n";
             result[entry.first] = SignedRange::narrow(result[entry.first], entry.second, entry.first->getType()->getIntegerBitWidth());
-    
-        }
+            outs() << "\tResult: " <<  static_cast<std::string>(result[entry.first]) << "\n";        }
     }   
 
     return result;
@@ -118,15 +121,17 @@ RangeAnalysis::LatticeValT RangeAnalysis::widen(Instruction* I, LatticeValT outV
     
     DenseMap<Value*, SignedRange> result = outVal;
     
+    I->print(outs()); outs() << "\n";
     for (auto &entry : oldOutVal) {
         if (result.contains(entry.first)) {
+            outs() << "Widening: %" << entry.first->getName() << " with old value " << static_cast<std::string>(oldOutVal[entry.first]) << " and new value " << static_cast<std::string>(outVal[entry.first]) << "\n";
             result[entry.first] = SignedRange::widen(result[entry.first], entry.second, entry.first->getType()->getIntegerBitWidth());
+            outs() << "\tResult: " <<  static_cast<std::string>(result[entry.first]) << "\n";
         }
     }   
 
     return result;
 }
-
 
 RangeAnalysis::LatticeValT RangeAnalysis::getNodePathSensitiveOutput(Instruction* node, Instruction* parent, LatticeValT parentOutput) {
     // Start with parent's output

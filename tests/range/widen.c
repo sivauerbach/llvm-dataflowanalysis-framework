@@ -72,12 +72,24 @@ int test_widen(int a) {
     a=1;
     while (a < 2147483646){ // a < 2^32-2
         a = a + 1; // a= 2^32-3
+        // add=a+1
+        // a=add;
+        
+        //widnening: [1, max]
+        //without widening, running loop 2147483646 times: [1, 2147483646]
+        // narrowing: oldval=widen= [1, max]
+                //      newval = PSO = [1, 2147483646-1+1]
     }
 
-    
+    // getPSO: a= [2147483646, max] INTSCT [1, max] = [2147483646, max]
+    // after narrowing loop:
+    // PSO= [1, 2147483646-1+1] INTSCT [2147483646, max] = [2147483646, 2147483646]
+    // after narrowing while.end: Narrow([2147483646, max], [2147483646, 2147483646]) = [2147483646, 2147483646]
+    // oldval MEET newval =
+
     return a; // if a entered loop : 
                 // a= 2^32-1, else a=2^32
-                // reange(a) = (2^32-1, 2^32)
+                // reange(a) = (2^32-1, 2^32-1)
 }
 
 int test_widen_sub(int a) {
